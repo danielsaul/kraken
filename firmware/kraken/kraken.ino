@@ -9,6 +9,12 @@
   * (C) SGS Poseidon Project 2013
   */
 
+// Include libraries
+#include <SD.h>
+#include <SoftwareSerial.h>
+#include "OneWire.h"
+#include "DallasTemperature.h"
+
 
 // Settings
 #define SERIAL_DEBUG
