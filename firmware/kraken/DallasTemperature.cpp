@@ -437,10 +437,10 @@ float DallasTemperature::calculateTemperature(uint8_t* deviceAddress, uint8_t* s
       /*
 
       Resolutions greater than 9 bits can be calculated using the data from
-      the temperature, COUNT REMAIN and COUNT PER �C registers in the
-      scratchpad. Note that the COUNT PER �C register is hard-wired to 16
+      the temperature, COUNT REMAIN and COUNT PER ï¿½C registers in the
+      scratchpad. Note that the COUNT PER ï¿½C register is hard-wired to 16
       (10h). After reading the scratchpad, the TEMP_READ value is obtained
-      by truncating the 0.5�C bit (bit 0) from the temperature data. The
+      by truncating the 0.5ï¿½C bit (bit 0) from the temperature data. The
       extended resolution temperature can then be calculated using the
       following equation:
 
@@ -736,3 +736,4 @@ void DallasTemperature::operator delete(void* p)
 }
 
 #endif
+

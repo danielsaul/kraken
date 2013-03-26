@@ -15,6 +15,8 @@
 #include "OneWire.h"
 #include "DallasTemperature.h"
 
+// Include Files
+#include "RockBlock.h"
 
 // Settings
 #define SERIAL_DEBUG
@@ -43,7 +45,7 @@ void setup(){
     if(!SD.begin(SD_CS_PIN)){
         #ifdef SERIAL_DEBUG
             Serial.begin(115200);
-            Serial.println("SD card failed to initialise.")
+            Serial.println("SD card failed to initialise.");
         #endif
     }
 
@@ -54,11 +56,12 @@ void setup(){
     
     // Setup RockBlock
     //
+    rockblock_init();
 
     // Finished Initialising
     #ifdef SERIAL_DEBUG
         Serial.begin(115200);
-        Serial.println("\n Kraken booted successfully. \n");
+        Serial.println("\nKraken booted successfully. \n");
     #endif
     digitalWrite(STATUS_LED_PIN, LOW);
 }
