@@ -9,6 +9,8 @@
   * (C) SGS Poseidon Project 2013
   */
 
+
+
 // Include libraries
 #include <SD.h>
 #include <SoftwareSerial.h>
@@ -17,9 +19,9 @@
 
 // Include Files
 #include "RockBlock.h"
+#include "gps.h"
 
 // Settings
-#define SERIAL_DEBUG
 const uint8_t STATUS_LED_PIN = A0;
 const uint8_t TEMP_PIN = 2;
 const uint8_t SD_CS_PIN = 10;
@@ -28,13 +30,11 @@ const uint8_t SD_CS_PIN = 10;
 
 void setup(){
 
-    #ifdef SERIAL_DEBUG
-        // Setup serial for debugging
-        Serial.begin(115200);
-        Serial.println("------------------");
-        Serial.println("|   The Kraken   |");
-        Serial.println("------------------");
-    #endif
+    // Setup serial for debugging
+    Serial.begin(9600);
+    Serial.println("------------------");
+    Serial.println("|   The Kraken   |");
+    Serial.println("------------------");
 
     // Initialise and turn on status LED
     pinMode(STATUS_LED_PIN, OUTPUT);
@@ -43,20 +43,14 @@ void setup(){
     // Setup SD Card
     pinMode(SD_CS_PIN, OUTPUT);
     if(!SD.begin(SD_CS_PIN)){
-        #ifdef SERIAL_DEBUG
-            Serial.begin(115200);
             Serial.println("SD card failed to initialise.");
-        #endif
     }
 
-    // Setup GPS
-    // GPS stuff should have something in it that changes baud to GPS baud each time
-    // Don't need to change to lower baud though - 9600 is fine.
-    // Please please please put all the GPS stuff in a seperate file.
+    // Setup rockblock
+    //rockblock_init();
     
-    // Setup RockBlock
-    //
-    rockblock_init();
+    // Setup GPS
+    gps_setup(); 
 
     // Finished Initialising
     #ifdef SERIAL_DEBUG

@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "CommCtrlrConfig.h"
+#include "RockBlock.h"
 #include "Iridium9602.h"
 #include <SoftwareSerial.h>
 
@@ -45,9 +46,9 @@ void Iridium9602::initModem()
         }
 
         //delay(2500);
-
         //Turn modem on
-        digitalWrite(pinModemPowerSwitch, HIGH);
+        digitalWrite(RB_SLEEP, HIGH);
+        /*
         //Check for DSR line going high to indicate boot has finished
         { 
                 unsigned long millistart = millis();
@@ -63,29 +64,32 @@ void Iridium9602::initModem()
         //{
                 //Setup NetworkAvailable Pinchange interrupt 
                 //initIridiumNetworkInterrupt();
-        //}
+        //}*/
 
         while(!sendCommandandExpectPrefix(F("AT"), F("OK"), 500)) {
-
         }
+            Serial.println("RockBlock: Responding");
 
         //Set Serial Character Echo Off 
         sendCommandandExpectPrefix(F("ATE0"), F("OK"), 1000);
+            Serial.println("RockBlock: Echo Off");
 
         //Set modem to not use flow control handshaking during SBD messaging âˆš
         sendCommandandExpectPrefix(F("AT&K0"), F("OK"), 1000);
-
+            Serial.println("RockBlock: Flow control off");
         //Set response quiet mode - 0 = responses ARE sent to arduino from modem âˆš
         sendCommandandExpectPrefix(F("ATQ0"), F("OK"), 1000);
+            Serial.println("RockBlock: Responses on");
 
         setIncommingMsgAlert(false);
 
         // Write the defaults to the modem and use default and flush to eeprom âˆš
         sendCommandandExpectPrefix(F("AT&W0"), F("OK"), 1000);
-
+            Serial.println("RockBlock: Write defaults");
         //Designate Default Reset Profile
         sendCommandandExpectPrefix(F("AT&Y0"), F("OK"), 1000);
-
+            Serial.println("RockBlock: Default reset profile");
+        
         setIndicatorReporting(true);
         setIncommingMsgAlert(true);
 }
@@ -161,12 +165,12 @@ err_out:
 void Iridium9602::parseUnsolicitedResponse(char * cmd)
 {
         /* check time session lost timeout */
-		wdtrst();
+		//wdtrst();
         if (strncmp_P(_receivedCmd, PSTR("+SBDIX:"), 7) == 0) {
                 //DebugMsg::msg_P("SAT", 'D', PSTR("Match SBDIX"));
                 int mo_st = -1, mt_st, mt_len, mt_q;
                 if (parseSBDIXResponse(_receivedCmd, &mo_st, &mt_st, &mt_len, &mt_q)) {
-                    wdtrst();
+                    //wdtrst();
                     if (mt_st == 1) {  // Received message OK if 1
                     	_MTQueued = mt_q + 1;
                     	_MTMsgLen = mt_len;	
@@ -182,16 +186,16 @@ void Iridium9602::parseUnsolicitedResponse(char * cmd)
 
 
                 clearIncomingMsg();
-                wdtrst();
+                //wdtrst();
                 expectPrefix(F("OK"), satResponseTimeout);
-                wdtrst();
+                //wdtrst();
                 _sessionInitiated = false;
     
 
                 if (_MOQueued && 
                     (mo_st >= 0) && (mo_st <= 4)) {   //4 or less indicates sent success
                         _lastSessionResult = 1;
-                        wdtrst();
+                       // wdtrst();
                         /* clear out the MO queue since message was sent */
                         sendCommandandExpectPrefix("AT+SBDD0", "OK", satResponseTimeout);
                         _MOQueued = false;
@@ -237,7 +241,7 @@ bool Iridium9602::expectLoop(const void * response,
                 DebugMsg::msg_P("SAT", 'D', PSTR("_rcvIdx is not 0 at start of %s"), __func__);
         }
 #endif
-		wdtrst();
+		//wdtrst();
         /* always run at least one loop iteration */
         do {
                 /* time left */
@@ -494,7 +498,7 @@ bool Iridium9602::isSatAvailable(void)
 {
 /*XXXX */
 #if 1
-        if (digitalRead(pinNA) == HIGH) 
+        if (digitalRead(RB_NET) == HIGH) 
         {
                 return true;
         } 
@@ -509,7 +513,7 @@ void Iridium9602::powerOff(void)
 {
         sendCommandandExpectPrefix(F("AT+*F"), F("OK"), satResponseTimeout);      //Make sat modem prepare for poweroff
         //Wait until OK for up to 10 seconds
-        digitalWrite(pinModemPowerSwitch,LOW);  //Power modem off.
+        digitalWrite(RB_SLEEP,LOW);  //Power modem off.
 }
 
 void Iridium9602::powerOn(void)
