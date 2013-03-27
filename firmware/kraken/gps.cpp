@@ -19,12 +19,24 @@ void gps_setup(){
     Serial.begin(9600);
     Serial.flush();
 
- //   setSeaMode();
-    setOutputUBX();
+    setSeaMode();
+/*      digitalWrite(A0, HIGH);
+  delay(500);
+  digitalWrite(A0, LOW);
+    //setOutputUBX();
+      digitalWrite(A0, HIGH);
+  delay(500);
+  digitalWrite(A0, LOW);
     setNavSolOff();
+      digitalWrite(A0, HIGH);
+  delay(500);
+  digitalWrite(A0, LOW);
     setNavPosLLH();
+      digitalWrite(A0, HIGH);
+  delay(500);
+  digitalWrite(A0, LOW);*/
 
-    if(Serial.available()){
+    /*if(Serial.available()){
         delay(50);
      char datain;
      char packet[36];
@@ -34,11 +46,13 @@ void gps_setup(){
       }
 
     Serial.println(packet);
-    }
+    }*/
 
 
 
 }
+
+
 
 bool setNavSolOff(){
 uint8_t Buf[]={0x06, 0x01, 0x08, 0x00, 0x01, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -52,10 +66,10 @@ uint8_t Buf[]={0x06, 0x01, 0x08, 0x00, 0x01, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
  unsigned long starttime = millis(); 
     while(!gps_set_success)
     {
-        if (millis() - starttime > gps_timeout){
+        /*if (millis() - starttime > gps_timeout){
             gps_set_success=0;
             return false;
-        }
+        }*/
 
         sendUBX(unsetport, sizeof(unsetport)/sizeof(uint8_t));
         gps_set_success=getUBX_ACK(unsetport);
@@ -80,10 +94,10 @@ uint8_t buf[]={0x06, 0x01, 0x08, 0x00, 0x01, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00,
   unsigned long starttime = millis(); 
     while(!gps_set_success)
     {
-        if (millis() - starttime > gps_timeout){
+       /* if (millis() - starttime > gps_timeout){
             gps_set_success=0;
             return false;
-        }
+        }*/
 
         sendUBX(setport, sizeof(setport)/sizeof(uint8_t));
         gps_set_success=getUBX_ACK(setport);
@@ -96,26 +110,19 @@ uint8_t buf[]={0x06, 0x01, 0x08, 0x00, 0x01, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00,
 }
 
 bool setOutputUBX(){
-  uint8_t Buffer[]={0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0xC0, 0x12, 0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00};
-  CK_A = 0x00, CK_B = 0x00;
- for(int I=0;I<24;I++)
- {
-     CK_A = CK_A + Buffer[I];
-     CK_B = CK_B + CK_A;
- }
-  uint8_t setUBX[] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0xC0, 0x12, 0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, CK_A, CK_B};//don't forget to calculate checksum (page84) then add that to end of array - done
+  uint8_t setUBX[] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x9C, 0x89};//don't forget to calculate checksum (page84) then add that to end of array - done
   unsigned long starttime = millis(); 
-    while(!gps_set_success)
-    {
-        if (millis() - starttime > gps_timeout){
+   // while(!gps_set_success)
+   // {
+        /*if (millis() - starttime > gps_timeout){
             gps_set_success=0;
             return false;
-        }
+        }*/
 
         sendUBX(setUBX, sizeof(setUBX)/sizeof(uint8_t));
-        gps_set_success=getUBX_ACK(setUBX);
+//        gps_set_success=getUBX_ACK(setUBX);
 
-    }
+   // }
     gps_set_success=0;
 Serial.println("UBX mode set.");
     return true;
