@@ -65,6 +65,7 @@ void loop(){
  
   while(1)
   {
+  uint8_t fx = 0;
   for (int j = 0; j < 3; j++){
     int32_t lat,lon,alt;
     uint8_t b = getLocation(&lat,&lon,&alt);
@@ -83,21 +84,22 @@ void loop(){
     
     
      uint8_t lk,st;
-     b = gps_check_lock(&lk,&st);   
-     snprintf(buf,50,"lock: %d, %d",lk,st);
+     b = gps_check_lock(&fx,&st);   
+     snprintf(buf,50,"lock: %d, %d",fx,st);
      Serial.println(buf);
      
      delay(500);
-    
+ 
     
   }
-  
-  gps_sleep();
-  delay(5000);
-  delay(5000);
-  delay(5000);
-  delay(5000);
-  gps_wake();
+  if (fx == 3){
+    gps_sleep();
+    delay(5000);
+    delay(5000);
+    delay(5000);
+    delay(5000);
+    gps_wake();
+  }
   
   }
 
