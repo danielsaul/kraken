@@ -20,21 +20,21 @@ void gps_setup(){
     Serial.flush();
 
     setSeaMode();
-/*      digitalWrite(A0, HIGH);
-  delay(500);
-  digitalWrite(A0, LOW);
-    //setOutputUBX();
       digitalWrite(A0, HIGH);
   delay(500);
   digitalWrite(A0, LOW);
-    setNavSolOff();
+    setOutputUBX();
       digitalWrite(A0, HIGH);
   delay(500);
   digitalWrite(A0, LOW);
-    setNavPosLLH();
+//    setNavSolOff();
       digitalWrite(A0, HIGH);
   delay(500);
-  digitalWrite(A0, LOW);*/
+  digitalWrite(A0, LOW);
+   // setNavPosLLH();
+      digitalWrite(A0, HIGH);
+  delay(500);
+  digitalWrite(A0, LOW);
 
     /*if(Serial.available()){
         delay(50);
@@ -52,6 +52,110 @@ void gps_setup(){
 
 }
 
+
+
+uint8_t getLocation(int32_t* lat, int32_t* lon, int32_t* alt)
+{
+  // Request a NAV-POSLLH message from the GPS
+    uint8_t request[8] = {0xB5, 0x62, 0x01, 0x02, 0x00, 0x00, 0x03,
+        0x0A};
+  
+    sendUBX(request, 8);
+
+    while(Serial.available())
+      Serial.read();
+    Serial.flush();
+    uint8_t buf[36];
+    if (!getBytes(36,buf))
+      return 1;
+  
+  //for (int i =0; i < 36; i++){
+  //  Serial.print(buf[i],HEX);
+  // Serial.print(", "); 
+  //}
+
+    // Verify the sync and header bits
+    if( buf[0] != 0xB5 || buf[1] != 0x62 )
+        return 2;
+    if( buf[2] != 0x01 || buf[3] != 0x02 )
+        return 3;
+
+    // 4 bytes of longitude (1e-7)
+    *lon = (int32_t)buf[10] | (int32_t)buf[11] << 8 | 
+        (int32_t)buf[12] << 16 | (int32_t)buf[13] << 24;
+    
+    // 4 bytes of latitude (1e-7)
+    *lat = (int32_t)buf[14] | (int32_t)buf[15] << 8 | 
+        (int32_t)buf[16] << 16 | (int32_t)buf[17] << 24;
+    
+    // 4 bytes of altitude above MSL (mm)
+    *alt = (int32_t)buf[22] | (int32_t)buf[23] << 8 | 
+        (int32_t)buf[24] << 16 | (int32_t)buf[25] << 24;
+        
+    return 0;
+}
+
+uint8_t gps_get_time(uint8_t* hour, uint8_t* minute, uint8_t* second)
+{
+    // Send a NAV-TIMEUTC message to the receiver
+    uint8_t request[8] = {0xB5, 0x62, 0x01, 0x21, 0x00, 0x00,
+        0x22, 0x67};
+        
+    sendUBX(request, 8);
+    
+    while(Serial.available())
+      Serial.read();
+    Serial.flush();
+    uint8_t buf[28];
+    if (!getBytes(28,buf))
+      return 1;
+
+
+    // Verify the sync and header bits
+    if( buf[0] != 0xB5 || buf[1] != 0x62 )
+        return 2;
+    if( buf[2] != 0x01 || buf[3] != 0x21 )
+        return 3;
+
+    *hour = buf[22];
+    *minute = buf[23];
+    *second = buf[24];
+
+    return 0;
+}
+
+uint8_t gps_check_lock(uint8_t* lock, uint8_t* sats)
+{
+    // Construct the request to the GPS
+    uint8_t request[8] = {0xB5, 0x62, 0x01, 0x06, 0x00, 0x00,
+        0x07, 0x16};
+         
+    sendUBX(request, 8);
+    
+    while(Serial.available())
+      Serial.read();
+    Serial.flush();
+    uint8_t buf[60];
+    if (!getBytes(60,buf))
+      return 1;
+
+    // Verify the sync and header bits
+    if( buf[0] != 0xB5 || buf[1] != 0x62 )
+        return 2;
+    if( buf[2] != 0x01 || buf[3] != 0x06 )
+        return 3;
+
+  
+    // Return the value if GPSfixOK is set in 'flags'
+    if( buf[17] & 0x01 )
+        *lock = buf[16];
+    else
+        *lock = 0;
+
+    *sats = buf[53];
+    
+    return 0;
+}
 
 
 bool setNavSolOff(){
@@ -176,6 +280,47 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
   }
 }
 
+bool getBytes(uint8_t count, uint8_t* buff)
+{
+ unsigned long startTime = millis();
+  uint8_t t = 0;
+  uint8_t b;
+  bool start_found = false;
+  while (1) {
+ 
+    // Test for success
+    if (t >= count) {
+      // All packets in order!      
+      return true;
+    }
+ 
+    // Timeout if no valid response in 3 seconds
+    if (millis() - startTime > 3000) { 
+      
+      return false;
+    }
+ 
+    // Make sure data is available to read
+    if (Serial.available()) {
+      b = Serial.read(); 
+
+      if (!start_found){
+        if (b == 0xB5){
+          start_found = true;
+          t++;
+          *buff = b;
+          buff++;
+        }
+      }
+      else{
+        t++;
+        *buff = b;
+        buff++;   
+      } 
+    }    
+  }
+  return true;
+}
 
 bool getUBX_ACK(uint8_t *MSG) {
   uint8_t b;
