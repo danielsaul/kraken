@@ -47,17 +47,14 @@ void setup(){
     }
 
     // Setup rockblock
-    //rockblock_init();
+    rockblock_init();
     
     // Setup GPS
     gps_setup(); 
    
 
     // Finished Initialising
-    #ifdef SERIAL_DEBUG
-    //    Serial.begin(115200);
-        Serial.println("\nKraken booted successfully. \n");
-    #endif
+    Serial.println("\nKraken booted successfully. \n");
     digitalWrite(STATUS_LED_PIN, LOW);
 }
  
