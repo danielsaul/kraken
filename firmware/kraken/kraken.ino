@@ -29,6 +29,9 @@ const uint8_t STATUS_LED_PIN = A0;
 const uint8_t SD_CS_PIN = 10;
 
 uint8_t TEMP_ADDR[8] = {}; // NEEDS SETTING
+char SD_LOG[] = "KRAKEN.LOG";
+char SD_GPS[] = "GPS.LOG";
+char SD_IMU[] = "IMU.LOG";
 
 
 // Data struct
@@ -46,6 +49,8 @@ struct Data{
     uint8_t sats;
 
     float temp;
+    
+    float battery;
 
     uint8_t imu;  // IMU data on its way?
 
@@ -144,5 +149,17 @@ void loop(){
     // Sleep for a while
     // if within first 3 hours of being turned on, do loop more frequently
     // else every x hours, based on GPS time?
+
+}
+
+void sdcard_log(data* sentence, int16_t length)
+{
+
+    File logFile = SD.open(SD_LOG, FILE_WRITE);
+    if (logFile)
+    {
+        logFile.println();
+    }
+    logFile.close();
 
 }
