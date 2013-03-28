@@ -15,18 +15,41 @@
 #include <SD.h>
 #include <SoftwareSerial.h>
 #include "OneWire.h"
-#include "DallasTemperature.h"
+#include "EEPROM.h"
 
 // Include Files
 #include "RockBlock.h"
 #include "gps.h"
+#include "counter.h"
+#include "temperature.h"
+#include "battery.h"
 
 // Settings
 const uint8_t STATUS_LED_PIN = A0;
-const uint8_t TEMP_PIN = 2;
 const uint8_t SD_CS_PIN = 10;
 
+uint8_t TEMP_ADDR[8] = {}; // NEEDS SETTING
 
+
+// Data struct
+struct Data{
+    uint16_t counter;
+    
+    uint8_t hour;
+    uint8_t mins;
+    uint8_t secs;
+    
+    uint32_t lat;
+    uint32_t lon;
+    uint32_t alt;
+    
+    uint8_t sats;
+
+    float temp;
+
+    uint8_t imu;  // IMU data on its way?
+
+}
 
 void setup(){
 
@@ -52,7 +75,6 @@ void setup(){
     // Setup GPS
     gps_setup(); 
    
-
     // Finished Initialising
     Serial.println("\nKraken booted successfully. \n");
     digitalWrite(STATUS_LED_PIN, LOW);
@@ -101,7 +123,8 @@ void loop(){
   }
 
     // Counter +1
-    //
+    counter_inc();
+
     // Get temperature
     //
     // Turn on GPS, get data, turn off GPS
