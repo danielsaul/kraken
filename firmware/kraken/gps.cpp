@@ -4,51 +4,22 @@
   * Part of the Kraken Ocean Drifter
   * http://poseidon.sgsphysics.co.uk
   *
-  * Greg Brooks & Daniel Saul
+  * Various Authors
   * (C) SGS Poseidon Project 2013
   */
 
 #include "gps.h"
-uint8_t CK_A=0x00;  //checksum variables used to configure GPS
-uint8_t CK_B=0x00;
-uint8_t gps_set_success = 0;
+
 void gps_setup(){
 
-    Serial.println("Starting");
+    Serial.println("GPS: Starting up");
     delay(50);
+   
     Serial.begin(9600);
     Serial.flush();
 
     setSeaMode();
-      digitalWrite(A0, HIGH);
-  delay(500);
-  digitalWrite(A0, LOW);
     setOutputUBX();
-      digitalWrite(A0, HIGH);
-  delay(500);
-  digitalWrite(A0, LOW);
-//    setNavSolOff();
-      digitalWrite(A0, HIGH);
-  delay(500);
-  digitalWrite(A0, LOW);
-   // setNavPosLLH();
-      digitalWrite(A0, HIGH);
-  delay(500);
-  digitalWrite(A0, LOW);
-
-    /*if(Serial.available()){
-        delay(50);
-     char datain;
-     char packet[36];
-      for (int x=0; x<36; x++){
-        datain = Serial.read();
-        packet[x]=datain;//read the incoming binary packet into array 'packet'
-      }
-
-    Serial.println(packet);
-    }*/
-
-
 
 }
 
@@ -157,78 +128,20 @@ uint8_t gps_check_lock(uint8_t* lock, uint8_t* sats)
     return 0;
 }
 
-
-bool setNavSolOff(){
-uint8_t Buf[]={0x06, 0x01, 0x08, 0x00, 0x01, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
- CK_A = 0x00, CK_B = 0x00; 
- for(int x=0;x<12;x++)
- {
-     CK_A = CK_A + Buf[x];
-     CK_B = CK_B + CK_A;
- }
-  uint8_t unsetport[] = {0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0x01, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, CK_A, CK_B};//don't forget to calculate checksum (page84) then add that to end of array
- unsigned long starttime = millis(); 
-    while(!gps_set_success)
-    {
-        /*if (millis() - starttime > gps_timeout){
-            gps_set_success=0;
-            return false;
-        }*/
-
-        sendUBX(unsetport, sizeof(unsetport)/sizeof(uint8_t));
-        gps_set_success=getUBX_ACK(unsetport);
-
-    }
-    gps_set_success=0;
-    return true;
-
-
-}
-
-bool setNavPosLLH(){
-
-uint8_t buf[]={0x06, 0x01, 0x08, 0x00, 0x01, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
- CK_A = 0x00, CK_B = 0x00; 
- for(int x=0;x<12;x++)
- {
-     CK_A = CK_A + buf[x];
-     CK_B = CK_B + CK_A;
- }
-  uint8_t setport[] = {0xB5, 0x62, 0x06, 0x01, 0x08, 0x00, 0x01, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, CK_A, CK_B};//don't forget to calculate checksum (page84) then add that to end of array - done
-  unsigned long starttime = millis(); 
-    while(!gps_set_success)
-    {
-       /* if (millis() - starttime > gps_timeout){
-            gps_set_success=0;
-            return false;
-        }*/
-
-        sendUBX(setport, sizeof(setport)/sizeof(uint8_t));
-        gps_set_success=getUBX_ACK(setport);
-
-    }
-    gps_set_success=0;
-    return true;
-    
-
-}
+uint8_t CK_A=0x00;  //checksum variables used to configure GPS
+uint8_t CK_B=0x00;
+uint8_t gps_set_success = 0;
 
 bool setOutputUBX(){
-  uint8_t setUBX[] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x9C, 0x89};//don't forget to calculate checksum (page84) then add that to end of array - done
-  unsigned long starttime = millis(); 
+  uint8_t setUBX[] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x9C, 0x89};
    // while(!gps_set_success)
    // {
-        /*if (millis() - starttime > gps_timeout){
-            gps_set_success=0;
-            return false;
-        }*/
-
         sendUBX(setUBX, sizeof(setUBX)/sizeof(uint8_t));
-//        gps_set_success=getUBX_ACK(setUBX);
-
+   //   gps_set_success=getUBX_ACK(setUBX);
    // }
-    gps_set_success=0;
-Serial.println("UBX mode set.");
+   //gps_set_success=0;
+    
+    Serial.println("GPS: UBX mode set.");
     return true;
 }
 
@@ -245,15 +158,11 @@ bool setSeaMode(){
     unsigned long starttime = millis(); 
     while(!gps_set_success)
     {
-        /*if (millis() - starttime > gps_timeout){
-            gps_set_success=0;
-            return false;
-        }*/
         sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
         gps_set_success=getUBX_ACK(setNav);
     }
     gps_set_success=0;
-    Serial.println("Sea mode set.");
+    Serial.println("GPS: Sea mode set.");
     return true;
 }
 

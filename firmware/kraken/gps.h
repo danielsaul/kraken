@@ -13,20 +13,15 @@
 
 #include "Arduino.h"
 
-
-
 const uint16_t gps_timeout = 10000;
 
 void gps_setup();
 bool setSeaMode();
 bool setOutputUBX();
-bool setNavSolOff();
-bool setNavPosLLH();
 bool getBytes(uint8_t count, uint8_t* buff);
 uint8_t getLocation(int32_t* lat, int32_t* lon, int32_t* alt);
 uint8_t gps_get_time(uint8_t* hour, uint8_t* minute, uint8_t* second);
 uint8_t gps_check_lock(uint8_t* lock, uint8_t* sats);
-
 void gps_sleep();
 void gps_wake();
 void sendUBX(uint8_t *MSG, uint8_t len);
