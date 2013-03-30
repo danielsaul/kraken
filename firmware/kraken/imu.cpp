@@ -49,7 +49,7 @@ void imu_sample()
     Timer1.initialize(100000);
     Timer1.attachInterrupt(imu_measure);
     
-    while (_imu_sample_pos < 150);
+    while (_imu_sample_pos < 100);
 }
 
 /*
@@ -68,7 +68,7 @@ void imu_measure()
 
     _imu_sample_pos++;
 
-    if (_imu_sample_pos >= 150)
+    if (_imu_sample_pos >= 100)
     {
         Timer1.detachInterrupt();
         Timer1.stop();
