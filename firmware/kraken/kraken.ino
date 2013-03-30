@@ -51,32 +51,16 @@ struct data {
     
     float battery;
 
-    uint16_t imu_counter;
-    uint8_t imu_hour;
-    uint8_t imu_mins;
-    uint16_t imu_position;
     int16_t imu_x[50];
     int16_t imu_y[50];
     int16_t imu_z[50];
 };
 
-// IMU Data
-uint8_t imu_hour = 0;
-uint8_t imu_mins = 0;
-
-uint16_t imu_position = 100;
-
-int16_t imu_x[100];
-int16_t imu_y[100];
-int16_t imu_z[100];
-
 void setup() {
     // Setup serial
     Serial.begin(9600);
     if (SERIAL_EN) {
-        Serial.println("----------");
-        Serial.println("| Kraken |");
-        Serial.println("----------");
+        Serial.println("Kraken");
     }
 
     // Initialise and turn on status LED
@@ -99,18 +83,19 @@ void setup() {
 
     // Setup temperature
     temperature_get(TEMP_ADDR);
-
-    // Setup IMU
-    imu_setup(&imu_x[0], &imu_y[0], &imu_z[0]);
    
     // Finished Initialising
-    if (SERIAL_EN) Serial.println("\nKraken booted successfully.\n");
+    if (SERIAL_EN) Serial.println("\nBooted\n");
     digitalWrite(STATUS_LED_PIN, LOW);
 }
  
 void loop(){
     // Data
     data msg;
+
+    // Get IMU data
+    imu_setup(&msg.imu_x[0], &msg.imu_y[0], &msg.imu_z[0]);
+    imu_sample();
 
     // GPS
     gps_wake();
@@ -150,43 +135,17 @@ void loop(){
     float battery_voltage = 99.99;
     msg.battery = battery_get_voltage();
 
-    // Get IMU data
-    if (imu_position >= 100) {
-        if (SERIAL_EN)
-            Serial.println("IMU: Taking new sample");
-        imu_sample();
-        imu_position = 0;
-
-        imu_counter_inc();
-
-        imu_hour = msg.hour;
-        imu_mins = msg.mins;
-    }
-
-    msg.imu_counter = imu_counter_get();
-    msg.imu_position = imu_position;
-    msg.imu_hour = imu_hour;
-    msg.imu_mins = imu_mins;
-
     // Print data to serial 
     if (SERIAL_EN) {
-        char buf[50];
-        snprintf(buf, 50, "position: %li, %li, %li", msg.lat, msg.lon, msg.alt);
-        Serial.println(buf);
-
-        snprintf(buf, 50, "time: %d:%d:%d", msg.hour, msg.mins, msg.secs);
-        Serial.println(buf);
-
-        snprintf(buf, 50, "lock: %d, %d", fx, msg.sats);
-        Serial.println(buf);
-
-        Serial.print("count: ");
+        Serial.println(msg.lat);
+        Serial.println(msg.lon);
+        Serial.println(msg.alt);
+        Serial.println(msg.hour);
+        Serial.println(msg.mins);
+        Serial.println(msg.secs);
+        Serial.println(msg.sats);
         Serial.println(msg.counter);
-
-        Serial.print("temp: ");
         Serial.println(msg.temp);
-
-        Serial.print("battery: ");
         Serial.println(msg.battery);
     }
 
@@ -194,16 +153,16 @@ void loop(){
     digitalWrite(STATUS_LED_PIN, HIGH);
     if (rockblock_send((unsigned char*) &msg, sizeof(msg))) {
         if (SERIAL_EN)
-            Serial.println("RockBlock: Message sent");
+            Serial.println("RB: Sent");
     } else {
         if (SERIAL_EN)
-            Serial.println("RockBlock: Message could not be sent");
+            Serial.println("RB: Not sent");
     }
     digitalWrite(STATUS_LED_PIN, LOW);
 
     // Sleep for 2 minutes
     if (SERIAL_EN)
-        Serial.println("Kraken: Sleeping");
+        Serial.println("Sleeping");
     delay(120000);
 }
 

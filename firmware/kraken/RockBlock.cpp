@@ -18,10 +18,10 @@ void rockblock_init() {
 
     if (rockblock_send(&testmsg[0], 19)) {
         if (SERIAL_EN)
-            Serial.println("RockBlock: Test message successful");
+            Serial.println("RB: Sent");
     } else {
         if (SERIAL_EN)
-            Serial.println("RockBlock: Test message unsuccessful");
+            Serial.println("RB: Not sent");
     }
 }
 
@@ -30,9 +30,9 @@ bool rockblock_send(unsigned char *msg, int length) {
     rockblock_on();
 
     if (SERIAL_EN) {
-        if(iridium.isSatAvailable()) Serial.println("RockBlock: Satellite available");
+        if(iridium.isSatAvailable()) Serial.println("RB: Sat");
 
-        Serial.print("RockBlock: Signal strength ");
+        Serial.print("RB: Sig ");
         Serial.println(iridium.checkSignal());
     }
 
@@ -54,7 +54,7 @@ bool rockblock_sendmsg(unsigned char *msg, int length) {
         }
 
         if (SERIAL_EN)
-            Serial.println("RockBlock: Message loaded");
+            Serial.println("RB: Loaded");
         iridium.initiateSBDSession(responseLost);
 
         if((iridium.lastSessionResult() >= 0) && (iridium.lastSessionResult() <= 4)) {

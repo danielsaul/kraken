@@ -150,7 +150,7 @@ bool setOutputUBX(){
     //gps_set_success=0;
 
     if (SERIAL_EN)
-        Serial.println("GPS: UBX mode set");
+        Serial.println("GPS: UBX");
     return true;
 }
 
@@ -172,7 +172,7 @@ bool setSeaMode(){
     }
     gps_set_success=0;
     if (SERIAL_EN)
-        Serial.println("GPS: Sea mode set");
+        Serial.println("GPS: Sea");
     return true;
 }
 

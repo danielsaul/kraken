@@ -69,32 +69,32 @@ void Iridium9602::initModem()
         while(!sendCommandandExpectPrefix(F("AT"), F("OK"), 500)) {
         }
         if (SERIAL_EN)
-            Serial.println("RockBlock: Responding");
+            Serial.println("RB: Responding");
 
         //Set Serial Character Echo Off 
         sendCommandandExpectPrefix(F("ATE0"), F("OK"), 1000);
-        if (SERIAL_EN)
-            Serial.println("RockBlock: Echo Off");
+        //if (SERIAL_EN)
+        //    Serial.println("RockBlock: Echo Off");
 
         //Set modem to not use flow control handshaking during SBD messaging âˆš
         sendCommandandExpectPrefix(F("AT&K0"), F("OK"), 1000);
-        if (SERIAL_EN)
-            Serial.println("RockBlock: Flow control off");
+        //if (SERIAL_EN)
+        //    Serial.println("RockBlock: Flow control off");
         //Set response quiet mode - 0 = responses ARE sent to arduino from modem âˆš
         sendCommandandExpectPrefix(F("ATQ0"), F("OK"), 1000);
-        if (SERIAL_EN)
-            Serial.println("RockBlock: Responses on");
+        //if (SERIAL_EN)
+        //    Serial.println("RockBlock: Responses on");
 
         setIncommingMsgAlert(false);
 
         // Write the defaults to the modem and use default and flush to eeprom âˆš
         sendCommandandExpectPrefix(F("AT&W0"), F("OK"), 1000);
-        if (SERIAL_EN)
-            Serial.println("RockBlock: Write defaults");
+        //if (SERIAL_EN)
+        //    Serial.println("RockBlock: Write defaults");
         //Designate Default Reset Profile
         sendCommandandExpectPrefix(F("AT&Y0"), F("OK"), 1000);
-        if (SERIAL_EN)
-            Serial.println("RockBlock: Default reset profile");
+        //if (SERIAL_EN)
+        //    Serial.println("RockBlock: Default reset profile");
         
         setIndicatorReporting(true);
         setIncommingMsgAlert(true);

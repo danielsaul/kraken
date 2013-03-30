@@ -46,10 +46,16 @@ void imu_sample()
 {
     _imu_sample_pos = 0;
 
+    if (SERIAL_EN)
+        Serial.println("IMU: Sampling");
+
     Timer1.initialize(100000);
     Timer1.attachInterrupt(imu_measure);
     
-    while (_imu_sample_pos < 100);
+    while (_imu_sample_pos < 50)
+    {
+        delay(100); 
+    }
 }
 
 /*
@@ -68,7 +74,7 @@ void imu_measure()
 
     _imu_sample_pos++;
 
-    if (_imu_sample_pos >= 100)
+    if (_imu_sample_pos >= 50)
     {
         Timer1.detachInterrupt();
         Timer1.stop();

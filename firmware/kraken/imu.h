@@ -14,6 +14,7 @@
 #include "Arduino.h"
 #include "Wire.h"
 #include "TimerOne.h"
+#include "debug.h"
 
 #define IMU_ADDR 0x53
 
