@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <SoftwareSerial.h>
+#include "debug.h"
 
 #define MAX_RECV_BUFFER 100
 

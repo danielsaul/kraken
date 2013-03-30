@@ -27,7 +27,7 @@
  */
 #define BATTERY_RESISTOR_RATIO 0.4
 #define BATTERY_REFERENCE_VOLTS 3.3
-#define BATTERY_ADJUSTMENT 0.994
+#define BATTERY_ADJUSTMENT 1.01
 
 float battery_get_voltage();
 

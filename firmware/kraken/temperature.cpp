@@ -28,7 +28,7 @@ float temperature_get(uint8_t* addr)
     ds.write(0x44);
 
     // Wait while conversion is in process
-    while(digitalRead(TEMPERATURE_PIN) == 0) {}
+    while(digitalRead(TEMPERATURE_PIN) == 0);
 
     // Read scratchpad
     ds.reset();

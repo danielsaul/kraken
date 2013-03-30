@@ -12,10 +12,12 @@
 #define GPS_H
 
 #include "Arduino.h"
+#include "debug.h"
 
 const uint16_t gps_timeout = 10000;
 
 void gps_setup();
+bool gps_get(int32_t* lat, int32_t* lon, int32_t* alt, uint8_t* hr, uint8_t* mn, uint8_t* sc, uint8_t* st, uint8_t* fx);
 bool setSeaMode();
 bool setOutputUBX();
 bool getBytes(uint8_t count, uint8_t* buff);
@@ -26,7 +28,6 @@ void gps_sleep();
 void gps_wake();
 void sendUBX(uint8_t *MSG, uint8_t len);
 bool getUBX_ACK(uint8_t *MSG);
-
 
 #endif
 

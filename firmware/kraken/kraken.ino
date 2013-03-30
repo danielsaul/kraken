@@ -9,15 +9,14 @@
   * (C) SGS Poseidon Project 2013
   */
 
-
-
 // Include libraries
-#include <SD.h>
+//#include <SD.h>
+#include <EEPROM.h>
 #include <SoftwareSerial.h>
 #include "OneWire.h"
-#include "EEPROM.h"
 
 // Include Files
+#include "debug.h"
 #include "RockBlock.h"
 #include "gps.h"
 #include "counter.h"
@@ -26,140 +25,160 @@
 
 // Settings
 const uint8_t STATUS_LED_PIN = A0;
-const uint8_t SD_CS_PIN = 10;
+//const uint8_t SD_CS_PIN = 10;
 
-uint8_t TEMP_ADDR[8] = {}; // NEEDS SETTING
-char SD_LOG[] = "KRAKEN.LOG";
-char SD_GPS[] = "GPS.LOG";
-char SD_IMU[] = "IMU.LOG";
+uint8_t TEMP_ADDR[8] = {0x28, 0xB8, 0x90, 0x64, 0x04, 0x00, 0x00, 0x0F};
+//char SD_LOG[] = "KRAKEN.LOG";
+//char SD_GPS[] = "GPS.LOG";
+//char SD_IMU[] = "IMU.LOG";
 
-
-// Data struct
-struct Data{
+// Iridium Data Struct
+struct data {
     uint16_t counter;
     
     uint8_t hour;
     uint8_t mins;
     uint8_t secs;
     
-    uint32_t lat;
-    uint32_t lon;
-    uint32_t alt;
+    int32_t lat;
+    int32_t lon;
+    int32_t alt;
     
     uint8_t sats;
 
     float temp;
     
     float battery;
+};
 
-    uint8_t imu;  // IMU data on its way?
+void setup() {
 
-}
-
-void setup(){
-
-    // Setup serial for debugging
+    // Setup serial
     Serial.begin(9600);
-    Serial.println("------------------");
-    Serial.println("|   The Kraken   |");
-    Serial.println("------------------");
+    if (SERIAL_EN) {
+        Serial.println("----------");
+        Serial.println("| Kraken |");
+        Serial.println("----------");
+    }
 
     // Initialise and turn on status LED
     pinMode(STATUS_LED_PIN, OUTPUT);
     digitalWrite(STATUS_LED_PIN, HIGH);
 
     // Setup SD Card
+    /*
     pinMode(SD_CS_PIN, OUTPUT);
     if(!SD.begin(SD_CS_PIN)){
-            Serial.println("SD card failed to initialise.");
+        Serial.println("SD card failed to initialise.");
     }
+    */
 
     // Setup rockblock
     rockblock_init();
     
-    // Setup GPS
+    // Setup GPS and put to sleep
     gps_setup(); 
+
+    // Setup temperature
+    temperature_get(TEMP_ADDR);
    
     // Finished Initialising
-    Serial.println("\nKraken booted successfully. \n");
+    if (SERIAL_EN) Serial.println("\nKraken booted successfully.\n");
     digitalWrite(STATUS_LED_PIN, LOW);
 }
  
 void loop(){
- 
-  while(1)
-  {
-    uint8_t fx,st = 0;
-    for (int j = 0; j < 3; j++){
-      int32_t lat,lon,alt;
-      uint8_t b = getLocation(&lat,&lon,&alt);
-      char buf[50];
-      
-      snprintf(buf,50,"position: %li, %li, %li",lat,lon,alt);
-       Serial.println(buf);
-  
-      
-      
-       uint8_t hr,mn,sc;
-       b = gps_get_time(&hr,&mn,&sc);
-       snprintf(buf,50,"time: %d:%d:%d",hr,mn,sc);
-       Serial.println(buf);
-  
-      
-      
-       
-       b = gps_check_lock(&fx,&st);   
-       snprintf(buf,50,"lock: %d, %d",fx,st);
-       Serial.println(buf);
-       
-       delay(500);
-   
-      
+    // Data
+    data msg;
+
+    // GPS
+    gps_wake();
+
+    uint8_t count = 0;
+    uint8_t tries = 0;
+    msg.lat = 0;
+    msg.lon = 0;
+    msg.alt = 0;
+    msg.hour = 0;
+    msg.mins = 0;
+    msg.secs = 0;
+    msg.sats = 0;
+    uint8_t fx = 0;
+    
+    while (count < 3 && tries < 100) {
+        tries++;
+
+        if (gps_get(&msg.lat, &msg.lon, &msg.alt, &msg.hour, &msg.mins, &msg.secs, &msg.sats, &fx)) {
+            count++;
+        } else {
+            count = 0;
+        }
     }
-    if ((fx == 3 || fx == 2)&&(st>6)){
-      gps_sleep();
-      delay(5000);
-      delay(5000);
-      delay(5000);
-      delay(5000);
-      gps_wake();
-    }
-  
-  }
+
+    gps_sleep();
 
     // Counter +1
     counter_inc();
+    msg.counter = counter_get();
 
     // Get temperature
-    //
-    // Turn on GPS, get data, turn off GPS
-    //
-    // Get IMU data
-    //
-    // Store data on SD Card
-    //
-    // Print data to serial ifdef SERIAL_DEBUG
-    //
-    // Pack all data into binary format
-    //
-    // Send via RockBlock
-    //
-    // Check for messages from iridium
-    //
-    // Sleep for a while
-    // if within first 3 hours of being turned on, do loop more frequently
-    // else every x hours, based on GPS time?
+    float temperature = 99.99;
+    msg.temp = temperature_get(TEMP_ADDR);
 
+    // Battery Voltage
+    float battery_voltage = 99.99;
+    msg.battery = battery_get_voltage();
+
+    // Get IMU data
+    
+
+    // Print data to serial 
+    if (SERIAL_EN) {
+        char buf[50];
+        snprintf(buf, 50, "position: %li, %li, %li", msg.lat, msg.lon, msg.alt);
+        Serial.println(buf);
+
+        snprintf(buf, 50, "time: %d:%d:%d", msg.hour, msg.mins, msg.secs);
+        Serial.println(buf);
+
+        snprintf(buf, 50, "lock: %d, %d", fx, msg.sats);
+        Serial.println(buf);
+
+        Serial.print("count: ");
+        Serial.println(msg.counter);
+
+        Serial.print("temp: ");
+        Serial.println(msg.temp);
+
+        Serial.print("battery: ");
+        Serial.println(msg.battery);
+    }
+
+    // Send via RockBlock
+    digitalWrite(STATUS_LED_PIN, HIGH);
+    if (rockblock_send((unsigned char*) &msg, sizeof(msg))) {
+        if (SERIAL_EN)
+            Serial.println("RockBlock: Message sent");
+    } else {
+        if (SERIAL_EN)
+            Serial.println("RockBlock: Message could not be sent");
+    }
+    digitalWrite(STATUS_LED_PIN, LOW);
+
+    // Sleep for 2 minutes
+    if (SERIAL_EN)
+        Serial.println("Kraken: Sleeping");
+    delay(120000);
 }
 
+/*
 void sdcard_log(data* sentence, int16_t length)
 {
-
     File logFile = SD.open(SD_LOG, FILE_WRITE);
     if (logFile)
     {
         logFile.println();
     }
     logFile.close();
-
 }
+*/

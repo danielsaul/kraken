@@ -17,7 +17,7 @@
 #define COUNTER_H
 
 #include "Arduino.h"
-#include "EEPROM.h"
+#include <EEPROM.h>
 
 #define EEPROM_LOW_BYTE 0
 #define EEPROM_HIGH_BYTE 1

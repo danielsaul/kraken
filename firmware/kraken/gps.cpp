@@ -11,8 +11,8 @@
 #include "gps.h"
 
 void gps_setup(){
-
-    Serial.println("GPS: Starting up");
+    if (SERIAL_EN)
+        Serial.println("GPS: Starting up");
     delay(50);
    
     Serial.begin(9600);
@@ -21,13 +21,28 @@ void gps_setup(){
     setSeaMode();
     setOutputUBX();
 
+    gps_sleep();
 }
 
+bool gps_get(int32_t* lat, int32_t* lon, int32_t* alt, uint8_t* hr, 
+        uint8_t* mn, uint8_t* sc, uint8_t* st, uint8_t* fx)
+{
+    char buf[50];
+    uint8_t b = 0;
+    
+    b = getLocation(lat, lon, alt);
+    b = gps_get_time(hr, mn, sc);
+    b = gps_check_lock(fx, st);   
 
+    if ((*fx == 3 || *fx == 2) && (*st >= 5)) {
+        return true;
+    }
+    return false;
+}
 
 uint8_t getLocation(int32_t* lat, int32_t* lon, int32_t* alt)
 {
-  // Request a NAV-POSLLH message from the GPS
+    // Request a NAV-POSLLH message from the GPS
     uint8_t request[8] = {0xB5, 0x62, 0x01, 0x02, 0x00, 0x00, 0x03,
         0x0A};
   
@@ -40,11 +55,6 @@ uint8_t getLocation(int32_t* lat, int32_t* lon, int32_t* alt)
     if (!getBytes(36,buf))
       return 1;
   
-  //for (int i =0; i < 36; i++){
-  //  Serial.print(buf[i],HEX);
-  // Serial.print(", "); 
-  //}
-
     // Verify the sync and header bits
     if( buf[0] != 0xB5 || buf[1] != 0x62 )
         return 2;
@@ -81,7 +91,6 @@ uint8_t gps_get_time(uint8_t* hour, uint8_t* minute, uint8_t* second)
     if (!getBytes(28,buf))
       return 1;
 
-
     // Verify the sync and header bits
     if( buf[0] != 0xB5 || buf[1] != 0x62 )
         return 2;
@@ -115,7 +124,6 @@ uint8_t gps_check_lock(uint8_t* lock, uint8_t* sats)
         return 2;
     if( buf[2] != 0x01 || buf[3] != 0x06 )
         return 3;
-
   
     // Return the value if GPSfixOK is set in 'flags'
     if( buf[17] & 0x01 )
@@ -133,15 +141,16 @@ uint8_t CK_B=0x00;
 uint8_t gps_set_success = 0;
 
 bool setOutputUBX(){
-  uint8_t setUBX[] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x9C, 0x89};
-   // while(!gps_set_success)
-   // {
-        sendUBX(setUBX, sizeof(setUBX)/sizeof(uint8_t));
-   //   gps_set_success=getUBX_ACK(setUBX);
-   // }
-   //gps_set_success=0;
-    
-    Serial.println("GPS: UBX mode set.");
+    uint8_t setUBX[] = {0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x9C, 0x89};
+    // while(!gps_set_success)
+    // {
+    sendUBX(setUBX, sizeof(setUBX)/sizeof(uint8_t));
+    //   gps_set_success=getUBX_ACK(setUBX);
+    // }
+    //gps_set_success=0;
+
+    if (SERIAL_EN)
+        Serial.println("GPS: UBX mode set");
     return true;
 }
 
@@ -162,128 +171,125 @@ bool setSeaMode(){
         gps_set_success=getUBX_ACK(setNav);
     }
     gps_set_success=0;
-    Serial.println("GPS: Sea mode set.");
+    if (SERIAL_EN)
+        Serial.println("GPS: Sea mode set");
     return true;
 }
 
 
 void gps_sleep(){
-
     uint8_t GPSoff[] = {0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x00, 0x00,0x08, 0x00, 0x16, 0x74};
     sendUBX(GPSoff, sizeof(GPSoff)/sizeof(uint8_t));
-
 }
 
 void gps_wake(){
-
- uint8_t GPSon[] = {0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x00, 0x00,0x09, 0x00, 0x17, 0x76};
- sendUBX(GPSon, sizeof(GPSon)/sizeof(uint8_t));
-
+    uint8_t GPSon[] = {0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0x00, 0x00,0x09, 0x00, 0x17, 0x76};
+    sendUBX(GPSon, sizeof(GPSon)/sizeof(uint8_t));
+    setSeaMode();
+    setOutputUBX();
 }
-
 
 // Send a byte array of UBX protocol to the GPS
 void sendUBX(uint8_t *MSG, uint8_t len) {
-  for(int i=0; i<len; i++) {
-    Serial.write(MSG[i]);
-  }
+    for (int i=0; i<len; i++) {
+        Serial.write(MSG[i]);
+    }
 }
 
 bool getBytes(uint8_t count, uint8_t* buff)
 {
- unsigned long startTime = millis();
-  uint8_t t = 0;
-  uint8_t b;
-  bool start_found = false;
-  while (1) {
- 
-    // Test for success
-    if (t >= count) {
-      // All packets in order!      
-      return true;
-    }
- 
-    // Timeout if no valid response in 3 seconds
-    if (millis() - startTime > 3000) { 
-      
-      return false;
-    }
- 
-    // Make sure data is available to read
-    if (Serial.available()) {
-      b = Serial.read(); 
+    unsigned long startTime = millis();
+    uint8_t t = 0;
+    uint8_t b;
+    bool start_found = false;
+    while (1) {
 
-      if (!start_found){
-        if (b == 0xB5){
-          start_found = true;
-          t++;
-          *buff = b;
-          buff++;
+        // Test for success
+        if (t >= count) {
+            // All packets in order!      
+            return true;
         }
-      }
-      else{
-        t++;
-        *buff = b;
-        buff++;   
-      } 
-    }    
-  }
-  return true;
+
+        // Timeout if no valid response in 3 seconds
+        if (millis() - startTime > 3000) { 
+
+            return false;
+        }
+
+        // Make sure data is available to read
+        if (Serial.available()) {
+            b = Serial.read(); 
+
+            if (!start_found){
+                if (b == 0xB5){
+                    start_found = true;
+                    t++;
+                    *buff = b;
+                    buff++;
+                }
+            }
+            else{
+                t++;
+                *buff = b;
+                buff++;   
+            } 
+        }    
+    }
+    return true;
 }
 
 bool getUBX_ACK(uint8_t *MSG) {
-  uint8_t b;
-  uint8_t ackByteID = 0;
-  uint8_t ackPacket[10];
-  unsigned long startTime = millis();
-  
- 
-  // Construct the expected ACK packet    
-  ackPacket[0] = 0xB5;  // header
-  ackPacket[1] = 0x62;	// header
-  ackPacket[2] = 0x05;	// class
-  ackPacket[3] = 0x01;	// id
-  ackPacket[4] = 0x02;	// length
-  ackPacket[5] = 0x00;
-  ackPacket[6] = MSG[2];	// ACK class
-  ackPacket[7] = MSG[3];	// ACK id
-  ackPacket[8] = 0;		// CK_A
-  ackPacket[9] = 0;		// CK_B
- 
-  // Calculate the checksums
-  for (uint8_t i=2; i<8; i++) {
-    ackPacket[8] = ackPacket[8] + ackPacket[i];
-    ackPacket[9] = ackPacket[9] + ackPacket[8];
-  }
- 
-  while (1) {
- 
-    // Test for success
-    if (ackByteID > 9) {
-      // All packets in order!
-      
-      return true;
-    }
- 
-    // Timeout if no valid response in 3 seconds
-    if (millis() - startTime > 3000) { 
-      
-      return false;
-    }
- 
-    // Make sure data is available to read
-    if (Serial.available()) {
-      b = Serial.read(); 
-      // Check that bytes arrive in sequence as per expected ACK packet
-      if (b == ackPacket[ackByteID]) { 
-        ackByteID++;
-        
-      } 
-      else {
-        ackByteID = 0;	// Reset and look again, invalid order
-      }
- 
-    }
-  }
-}
+    uint8_t b;
+    uint8_t ackByteID = 0;
+    uint8_t ackPacket[10];
+    unsigned long startTime = millis();
 
+
+    // Construct the expected ACK packet    
+    ackPacket[0] = 0xB5;  // header
+    ackPacket[1] = 0x62;	// header
+    ackPacket[2] = 0x05;	// class
+    ackPacket[3] = 0x01;	// id
+    ackPacket[4] = 0x02;	// length
+    ackPacket[5] = 0x00;
+    ackPacket[6] = MSG[2];	// ACK class
+    ackPacket[7] = MSG[3];	// ACK id
+    ackPacket[8] = 0;		// CK_A
+    ackPacket[9] = 0;		// CK_B
+
+    // Calculate the checksums
+    for (uint8_t i=2; i<8; i++) {
+        ackPacket[8] = ackPacket[8] + ackPacket[i];
+        ackPacket[9] = ackPacket[9] + ackPacket[8];
+    }
+
+    while (1) {
+
+        // Test for success
+        if (ackByteID > 9) {
+            // All packets in order!
+
+            return true;
+        }
+
+        // Timeout if no valid response in 3 seconds
+        if (millis() - startTime > 3000) { 
+
+            return false;
+        }
+
+        // Make sure data is available to read
+        if (Serial.available()) {
+            b = Serial.read(); 
+            // Check that bytes arrive in sequence as per expected ACK packet
+            if (b == ackPacket[ackByteID]) { 
+                ackByteID++;
+
+            } 
+            else {
+                ackByteID = 0;	// Reset and look again, invalid order
+            }
+
+        }
+    }
+}
