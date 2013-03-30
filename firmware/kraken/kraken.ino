@@ -22,6 +22,7 @@
 #include "counter.h"
 #include "temperature.h"
 #include "battery.h"
+#include "imu.h"
 
 // Settings
 const uint8_t STATUS_LED_PIN = A0;
@@ -49,7 +50,25 @@ struct data {
     float temp;
     
     float battery;
+
+    uint16_t imu_counter;
+    uint8_t imu_hour;
+    uint8_t imu_mins;
+    uint16_t imu_position;
+    int16_t imu_x[50];
+    int16_t imu_y[50];
+    int16_t imu_z[50];
 };
+
+// IMU Data
+uint8_t imu_hour = 0;
+uint8_t imu_mins = 0;
+
+uint16_t imu_position = 350;
+
+int16_t imu_x[350];
+int16_t imu_y[350];
+int16_t imu_z[350];
 
 void setup() {
 
@@ -81,6 +100,9 @@ void setup() {
 
     // Setup temperature
     temperature_get(TEMP_ADDR);
+
+    // Setup IMU
+    imu_setup(&imu_x[0], &imu_y[0], &imu_z[0]);
    
     // Finished Initialising
     if (SERIAL_EN) Serial.println("\nKraken booted successfully.\n");
@@ -130,7 +152,20 @@ void loop(){
     msg.battery = battery_get_voltage();
 
     // Get IMU data
-    
+    if (imu_position >= 350) {
+        if (SERIAL_EN)
+            Serial.println("IMU: Taking new sample");
+        imu_sample();
+        imu_position = 0;
+
+        imu_counter_inc();
+
+        imu_hour = msg.hour;
+        imu_mins = msg.mins;
+    }
+
+    msg.imu_counter = imu_counter_get();
+    msg.imu_position = imu_position;
 
     // Print data to serial 
     if (SERIAL_EN) {
