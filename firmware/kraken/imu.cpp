@@ -40,16 +40,16 @@ void imu_setup(int16_t* imu_xs, int16_t* imu_ys, int16_t* imu_zs)
 }
 
 /*
-    Get 17.5s of IMU data at 20Hz. 
+    Get 15s of IMU data at 10Hz. 
 */
 void imu_sample()
 {
     _imu_sample_pos = 0;
 
-    Timer1.initialize(50000);
+    Timer1.initialize(100000);
     Timer1.attachInterrupt(imu_measure);
     
-    while (_imu_sample_pos < 350);
+    while (_imu_sample_pos < 150);
 }
 
 /*
@@ -68,7 +68,7 @@ void imu_measure()
 
     _imu_sample_pos++;
 
-    if (_imu_sample_pos >= 350)
+    if (_imu_sample_pos >= 150)
     {
         Timer1.detachInterrupt();
         Timer1.stop();

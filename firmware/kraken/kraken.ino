@@ -64,11 +64,11 @@ struct data {
 uint8_t imu_hour = 0;
 uint8_t imu_mins = 0;
 
-uint16_t imu_position = 350;
+uint16_t imu_position = 150;
 
-int16_t imu_x[350];
-int16_t imu_y[350];
-int16_t imu_z[350];
+int16_t imu_x[150];
+int16_t imu_y[150];
+int16_t imu_z[150];
 
 void setup() {
 
@@ -152,7 +152,7 @@ void loop(){
     msg.battery = battery_get_voltage();
 
     // Get IMU data
-    if (imu_position >= 350) {
+    if (imu_position >= 150) {
         if (SERIAL_EN)
             Serial.println("IMU: Taking new sample");
         imu_sample();
