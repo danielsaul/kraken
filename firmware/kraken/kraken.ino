@@ -34,6 +34,9 @@ uint8_t TEMP_ADDR[8] = {0x28, 0xB8, 0x90, 0x64, 0x04, 0x00, 0x00, 0x0F};
 //char SD_GPS[] = "GPS.LOG";
 //char SD_IMU[] = "IMU.LOG";
 
+// Send IMU data every X transmissions
+const uint8_t imu_transmissions = 5;
+
 // Sleep counter
 const uint16_t sleep_cycles = 4; // 2700 = 6 hours
 volatile uint16_t sleep_counter = sleep_cycles; // Initialise at max value
@@ -59,23 +62,6 @@ struct data {
     int16_t imu_x[50];
     int16_t imu_y[50];
     int16_t imu_z[50];
-};
-struct data_small {
-    uint16_t counter;
-    
-    uint8_t hour;
-    uint8_t mins;
-    uint8_t secs;
-    
-    int32_t lat;
-    int32_t lon;
-    int32_t alt;
-    
-    uint8_t sats;
-
-    float temp;
-    
-    float battery;
 };
 
 void setup() {
@@ -104,7 +90,11 @@ void setup() {
 
     // Initialise and turn on status LED
     pinMode(STATUS_LED_PIN, OUTPUT);
-    digitalWrite(STATUS_LED_PIN, HIGH);
+    if (SERIAL_EN) {
+        digitalWrite(STATUS_LED_PIN, HIGH);
+    } else {
+        digitalWrite(STATUS_LED_PIN, LOW);
+    }
 
     // Setup SD Card
     /*
@@ -124,8 +114,10 @@ void setup() {
     temperature_get(TEMP_ADDR);
    
     // Finished Initialising
-    if (SERIAL_EN) Serial.println("\nBooted\n");
-    digitalWrite(STATUS_LED_PIN, LOW);
+    if (SERIAL_EN) {
+        Serial.println("\nBooted\n");
+        digitalWrite(STATUS_LED_PIN, LOW);
+    }
 }
  
 void loop(){
@@ -147,12 +139,21 @@ void loop(){
     // Reset the sleep counter
     sleep_counter = 0;
 
-    // Data
+    // Data struct
     data msg;
 
-    // Get IMU data
-    imu_setup(&msg.imu_x[0], &msg.imu_y[0], &msg.imu_z[0]);
-    imu_sample();
+    // Counter +1
+    counter_inc();
+
+    // Store counter
+    msg.counter = counter_get();
+
+    // Only send IMU data every Nth transmission
+    if (msg.counter % imu_transmissions) {
+        // Get IMU data
+        imu_setup(&msg.imu_x[0], &msg.imu_y[0], &msg.imu_z[0]);
+        imu_sample();
+    }
 
     // GPS
     gps_wake();
@@ -181,12 +182,9 @@ void loop(){
     gps_sleep();
 
     if (SERIAL_EN)
+        Serial.println("");
         Serial.print("tries: ");
         Serial.println(tries);
-
-    // Counter +1
-    counter_inc();
-    msg.counter = counter_get();
 
     // Get temperature
     float temperature = 99.99;
@@ -221,16 +219,26 @@ void loop(){
     }
 
     // Send via RockBlock
-    digitalWrite(STATUS_LED_PIN, HIGH);
-    if (rockblock_send((unsigned char*) &msg, sizeof(msg))) {
-        if (SERIAL_EN)
-            Serial.println("RB: Sent");
+    if (SERIAL_EN)
+        digitalWrite(STATUS_LED_PIN, HIGH);
+
+    bool rockblock_response = false;
+    if (msg.counter % imu_transmissions) {
+        rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg));
     } else {
-        if (SERIAL_EN)
+        rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg) - sizeof(msg.imu_x) - sizeof(msg.imu_y) - sizeof(msg.imu_z));
+    }
+
+    if (SERIAL_EN) {
+        if (rockblock_response)
+            Serial.println("RB: Sent");
+        else 
             Serial.println("RB: Not sent");
     }
-    digitalWrite(STATUS_LED_PIN, LOW);
 
+    if (SERIAL_EN)
+        digitalWrite(STATUS_LED_PIN, LOW);
+    
     // Sleep 
     if (SERIAL_EN) {
         Serial.println("Sleeping");
