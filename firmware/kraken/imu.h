@@ -16,7 +16,8 @@
 #include "TimerOne.h"
 #include "debug.h"
 
-#define IMU_ADDR 0x53
+#define ACCEL_ADDR 0x53
+#define GYRO_ADDR 0x68
 
 void imu_setup(int16_t* imu_xs, int16_t* imu_ys, int16_t* imu_zs);
 void imu_sample();

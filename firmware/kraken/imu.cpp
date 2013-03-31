@@ -22,16 +22,16 @@ void imu_setup(int16_t* imu_xs, int16_t* imu_ys, int16_t* imu_zs)
 {
     Wire.begin();
 
-    // Set range
-    Wire.beginTransmission(IMU_ADDR);
-    Wire.write(0x31);
-    Wire.write(0x01);
+    // Put the gyro to sleep as it is not used
+    Wire.beginTransmission(GYRO_ADDR);
+    Wire.write(0x3E);
+    Wire.write(0x40);
     Wire.endTransmission();
 
-    // Measurement mode
-    Wire.beginTransmission(IMU_ADDR);
+    // Sleep mode
+    Wire.beginTransmission(ACCEL_ADDR);
     Wire.write(0x2D);
-    Wire.write(0x08);
+    Wire.write(0x04);
     Wire.endTransmission();
 
     _imu_xs = imu_xs;
@@ -44,6 +44,24 @@ void imu_setup(int16_t* imu_xs, int16_t* imu_ys, int16_t* imu_zs)
 */
 void imu_sample()
 {
+    // Standby
+    Wire.beginTransmission(ACCEL_ADDR);
+    Wire.write(0x2D);
+    Wire.write(0x00);
+    Wire.endTransmission();
+
+    // Measurement mode
+    Wire.beginTransmission(ACCEL_ADDR);
+    Wire.write(0x2D);
+    Wire.write(0x08);
+    Wire.endTransmission();
+
+    // Set range
+    Wire.beginTransmission(ACCEL_ADDR);
+    Wire.write(0x31);
+    Wire.write(0x01);
+    Wire.endTransmission();
+
     _imu_sample_pos = 0;
 
     if (SERIAL_EN)
@@ -56,6 +74,18 @@ void imu_sample()
     {
         delay(100); 
     }
+
+    // Standby
+    Wire.beginTransmission(ACCEL_ADDR);
+    Wire.write(0x2D);
+    Wire.write(0x00);
+    Wire.endTransmission();
+
+    // Sleep mode
+    Wire.beginTransmission(ACCEL_ADDR);
+    Wire.write(0x2D);
+    Wire.write(0x04);
+    Wire.endTransmission();
 }
 
 /*
@@ -86,11 +116,11 @@ void imu_measure()
 */
 void imu_get(int16_t* output)
 {
-    Wire.beginTransmission(IMU_ADDR);
+    Wire.beginTransmission(ACCEL_ADDR);
     Wire.write(0x32);
     Wire.endTransmission();
 
-    Wire.requestFrom(IMU_ADDR, 6);
+    Wire.requestFrom(ACCEL_ADDR, 6);
 
     int16_t values[6] = {};
     uint8_t count = 0;

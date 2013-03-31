@@ -14,15 +14,9 @@ SoftwareSerial rb(RB_RX, RB_TX);
 Iridium9602 iridium = Iridium9602(rb);
 
 void rockblock_init() {
-    unsigned char testmsg[] = "Kraken Initialising";
-
-    if (rockblock_send(&testmsg[0], 19)) {
-        if (SERIAL_EN)
-            Serial.println("RB: Sent");
-    } else {
-        if (SERIAL_EN)
-            Serial.println("RB: Not sent");
-    }
+    rb.begin(19200);
+    rockblock_on();
+    rockblock_off();
 }
 
 bool rockblock_send(unsigned char *msg, int length) {
@@ -36,13 +30,10 @@ bool rockblock_send(unsigned char *msg, int length) {
         Serial.println(iridium.checkSignal());
     }
 
-    if (rockblock_sendmsg(msg, length)) {
-        rockblock_off();
-        return true;
-    } else {
-        rockblock_off();
-        return false;
-    }
+    bool resp = rockblock_sendmsg(msg, length);
+
+    rockblock_off();
+    return resp;
 }
 
 bool rockblock_sendmsg(unsigned char *msg, int length) {
