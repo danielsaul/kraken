@@ -90,11 +90,10 @@ void setup() {
 
     // Initialise and turn on status LED
     pinMode(STATUS_LED_PIN, OUTPUT);
-    if (SERIAL_EN) {
+    if (SERIAL_EN) 
         digitalWrite(STATUS_LED_PIN, HIGH);
-    } else {
+    else
         digitalWrite(STATUS_LED_PIN, LOW);
-    }
 
     // Setup SD Card
     /*
@@ -105,6 +104,10 @@ void setup() {
     */
 
     // Setup rockblock
+    if (SERIAL_EN) {
+        Serial.println("RB: Starting up");
+        delay(50);
+    }
     rockblock_init();
     
     // Setup GPS and put to sleep
@@ -148,8 +151,14 @@ void loop(){
     // Store counter
     msg.counter = counter_get();
 
+    if (SERIAL_EN) {
+        Serial.println("");
+        Serial.print("Count: ");
+        Serial.println(msg.counter);
+    }
+
     // Only send IMU data every Nth transmission
-    if (msg.counter % imu_transmissions) {
+    if (msg.counter % imu_transmissions == 0) {
         // Get IMU data
         imu_setup(&msg.imu_x[0], &msg.imu_y[0], &msg.imu_z[0]);
         imu_sample();
@@ -182,8 +191,7 @@ void loop(){
     gps_sleep();
 
     if (SERIAL_EN)
-        Serial.println("");
-        Serial.print("tries: ");
+        Serial.print("Tries: ");
         Serial.println(tries);
 
     // Get temperature
@@ -196,25 +204,23 @@ void loop(){
 
     // Print data to serial 
     if (SERIAL_EN) {
-        Serial.print("lat: ");
+        Serial.print("Lat: ");
         Serial.println(msg.lat);
-        Serial.print("lon: ");
+        Serial.print("Lon: ");
         Serial.println(msg.lon);
-        Serial.print("alt: ");
+        Serial.print("Alt: ");
         Serial.println(msg.alt);
-        Serial.print("h: ");
+        Serial.print("Hr: ");
         Serial.println(msg.hour);
-        Serial.print("m: ");
+        Serial.print("Mn: ");
         Serial.println(msg.mins);
-        Serial.print("s: ");
+        Serial.print("Sc: ");
         Serial.println(msg.secs);
-        Serial.print("sats: ");
+        Serial.print("Sats: ");
         Serial.println(msg.sats);
-        Serial.print("count: ");
-        Serial.println(msg.counter);
-        Serial.print("temp: ");
+        Serial.print("Temp: ");
         Serial.println(msg.temp);
-        Serial.print("batt: ");
+        Serial.print("Batt: ");
         Serial.println(msg.battery);
     }
 
@@ -223,7 +229,7 @@ void loop(){
         digitalWrite(STATUS_LED_PIN, HIGH);
 
     bool rockblock_response = false;
-    if (msg.counter % imu_transmissions) {
+    if (msg.counter % imu_transmissions == 0) {
         rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg));
     } else {
         rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg) - sizeof(msg.imu_x) - sizeof(msg.imu_y) - sizeof(msg.imu_z));
