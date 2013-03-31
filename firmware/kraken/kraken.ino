@@ -38,7 +38,7 @@ uint8_t TEMP_ADDR[8] = {0x28, 0xB8, 0x90, 0x64, 0x04, 0x00, 0x00, 0x0F};
 const uint8_t imu_transmissions = 5;
 
 // Sleep counter
-const uint16_t sleep_cycles = 4; // 2700 = 6 hours
+const uint16_t sleep_cycles = 2700; // 2700 = 6 hours
 volatile uint16_t sleep_counter = sleep_cycles; // Initialise at max value
 
 // Iridium Data Struct
