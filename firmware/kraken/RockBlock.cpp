@@ -19,10 +19,7 @@ void rockblock_init() {
     rockblock_off();
 }
 
-bool rockblock_send(unsigned char *msg, int length) {
-    rb.begin(19200);
-    rockblock_on();
-
+bool rockblock_sendmsg(unsigned char *msg, int length) {
     if (SERIAL_EN) {
         if(iridium.isSatAvailable()) Serial.println("RB: Sat");
 
@@ -30,13 +27,6 @@ bool rockblock_send(unsigned char *msg, int length) {
         Serial.println(iridium.checkSignal());
     }
 
-    bool resp = rockblock_sendmsg(msg, length);
-
-    rockblock_off();
-    return resp;
-}
-
-bool rockblock_sendmsg(unsigned char *msg, int length) {
     if(iridium.isSatAvailable() && (iridium.checkSignal() >= minimumSignalRequired)) {
         uint8_t i = 0;
         while(!iridium.loadMOMessage(msg, length)) {
@@ -59,6 +49,7 @@ bool rockblock_sendmsg(unsigned char *msg, int length) {
 }
 
 void rockblock_on() {
+    rb.begin(19200);
     iridium.powerOn();
 }
 

@@ -29,7 +29,6 @@ const uint16_t maxTelemetryLength = 340;
 const uint16_t responseLost = 30000;
 
 void rockblock_init();
-bool rockblock_send(unsigned char* msg, int length);
 bool rockblock_sendmsg(unsigned char* msg, int length);
 void rockblock_on();
 void rockblock_off();

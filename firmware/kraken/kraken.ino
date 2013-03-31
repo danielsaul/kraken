@@ -142,6 +142,9 @@ void loop(){
     // Reset the sleep counter
     sleep_counter = 0;
 
+    // Rockblock on
+    rockblock_on();
+
     // Data struct
     data msg;
 
@@ -230,10 +233,13 @@ void loop(){
 
     bool rockblock_response = false;
     if (msg.counter % imu_transmissions == 0) {
-        rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg));
+        rockblock_response = rockblock_sendmsg((unsigned char*) &msg, sizeof(msg));
     } else {
-        rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg) - sizeof(msg.imu_x) - sizeof(msg.imu_y) - sizeof(msg.imu_z));
+        rockblock_response = rockblock_sendmsg((unsigned char*) &msg, sizeof(msg) - sizeof(msg.imu_x) - sizeof(msg.imu_y) - sizeof(msg.imu_z));
     }
+
+    // Turn RockBlock off
+    rockblock_off();
 
     if (SERIAL_EN) {
         if (rockblock_response)
