@@ -15,6 +15,7 @@ Iridium9602 iridium = Iridium9602(rb);
 
 void rockblock_init() {
     pinMode(RB_SLEEP, OUTPUT);
+    digitalWrite(RB_SLEEP, HIGH); // Turn RB on so if can be powered off without timing out
     rockblock_off();
 }
 

@@ -519,7 +519,7 @@ void Iridium9602::powerOff(void)
 {
         sendCommandandExpectPrefix(F("AT*F"), F("OK"), satResponseTimeout);      //Make sat modem prepare for poweroff
         //Wait until OK for up to 10 seconds
-        digitalWrite(RB_SLEEP,LOW);  //Power modem off.
+        digitalWrite(RB_SLEEP, LOW);  //Power modem off.
 }
 
 void Iridium9602::powerOn(void)
