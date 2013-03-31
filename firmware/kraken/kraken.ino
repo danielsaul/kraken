@@ -160,10 +160,10 @@ void loop(){
     }
     digitalWrite(STATUS_LED_PIN, LOW);
 
-    // Sleep for 2 minutes
+    // Sleep for 10 minutes
     if (SERIAL_EN)
         Serial.println("Sleeping");
-    delay(120000);
+    delay(600000);
 }
 
 /*

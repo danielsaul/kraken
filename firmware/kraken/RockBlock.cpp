@@ -14,8 +14,7 @@ SoftwareSerial rb(RB_RX, RB_TX);
 Iridium9602 iridium = Iridium9602(rb);
 
 void rockblock_init() {
-    rb.begin(19200);
-    rockblock_on();
+    pinMode(RB_SLEEP, OUTPUT);
     rockblock_off();
 }
 
@@ -40,22 +39,22 @@ bool rockblock_sendmsg(unsigned char *msg, int length) {
     if(iridium.isSatAvailable() && (iridium.checkSignal() >= minimumSignalRequired)) {
         uint8_t i = 0;
         while(!iridium.loadMOMessage(msg, length)) {
-            i += 1;
+            i++;
             if (i > 5) return false;
         }
 
         if (SERIAL_EN)
             Serial.println("RB: Loaded");
+
         iridium.initiateSBDSession(responseLost);
 
-        if((iridium.lastSessionResult() >= 0) && (iridium.lastSessionResult() <= 4)) {
+        bool lastResult = iridium.lastSessionResult();
+
+        if((lastResult >= 0) && (lastResult <= 4)) {
             return true;
-        } else {
-            return false;
-        }
-    } else {
-        return false;
+        } 
     }
+    return false;
 }
 
 void rockblock_on() {
