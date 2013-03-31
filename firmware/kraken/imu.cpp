@@ -65,7 +65,10 @@ void imu_sample()
     _imu_sample_pos = 0;
 
     if (SERIAL_EN)
+    {
         Serial.println("IMU: Sampling");
+        delay(50);
+    }
 
     Timer1.initialize(100000);
     Timer1.attachInterrupt(imu_measure);

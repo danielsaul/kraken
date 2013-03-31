@@ -10,6 +10,7 @@
   */
 
 // Include libraries
+#include <avr/sleep.h>
 //#include <SD.h>
 #include <EEPROM.h>
 #include <SoftwareSerial.h>
@@ -33,6 +34,10 @@ uint8_t TEMP_ADDR[8] = {0x28, 0xB8, 0x90, 0x64, 0x04, 0x00, 0x00, 0x0F};
 //char SD_GPS[] = "GPS.LOG";
 //char SD_IMU[] = "IMU.LOG";
 
+// Sleep counter
+const uint16_t sleep_cycles = 4; // 2700 = 6 hours
+volatile uint16_t sleep_counter = sleep_cycles; // Initialise at max value
+
 // Iridium Data Struct
 struct data {
     uint16_t counter;
@@ -55,8 +60,42 @@ struct data {
     int16_t imu_y[50];
     int16_t imu_z[50];
 };
+struct data_small {
+    uint16_t counter;
+    
+    uint8_t hour;
+    uint8_t mins;
+    uint8_t secs;
+    
+    int32_t lat;
+    int32_t lon;
+    int32_t alt;
+    
+    uint8_t sats;
+
+    float temp;
+    
+    float battery;
+};
 
 void setup() {
+    // Setup watchdog
+    cli();
+
+    //Clear the watchdog reset flag
+    MCUSR &= ~(1<<WDRF);
+
+    // Set WDCE so we can change the prescaler
+    WDTCSR |= 1<<WDCE | 1<<WDE;
+
+    // Set watchdog prescaler to 8 seconds
+    WDTCSR = 1<<WDP0 | 1<<WDP3;
+
+    // Setup sleep mode
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+
+    sei();
+
     // Setup serial
     Serial.begin(9600);
     if (SERIAL_EN) {
@@ -90,6 +129,24 @@ void setup() {
 }
  
 void loop(){
+    if (sleep_counter < sleep_cycles) {
+        sleep_mode();
+        return;
+    }
+
+    cli();
+
+    // Disable the watchdog interrupt
+    WDTCSR &= ~(1<<WDIE);
+
+    // Disable sleep mode
+    sleep_disable();
+
+    sei();
+
+    // Reset the sleep counter
+    sleep_counter = 0;
+
     // Data
     data msg;
 
@@ -123,6 +180,10 @@ void loop(){
 
     gps_sleep();
 
+    if (SERIAL_EN)
+        Serial.print("tries: ");
+        Serial.println(tries);
+
     // Counter +1
     counter_inc();
     msg.counter = counter_get();
@@ -137,15 +198,25 @@ void loop(){
 
     // Print data to serial 
     if (SERIAL_EN) {
+        Serial.print("lat: ");
         Serial.println(msg.lat);
+        Serial.print("lon: ");
         Serial.println(msg.lon);
+        Serial.print("alt: ");
         Serial.println(msg.alt);
+        Serial.print("h: ");
         Serial.println(msg.hour);
+        Serial.print("m: ");
         Serial.println(msg.mins);
+        Serial.print("s: ");
         Serial.println(msg.secs);
+        Serial.print("sats: ");
         Serial.println(msg.sats);
+        Serial.print("count: ");
         Serial.println(msg.counter);
+        Serial.print("temp: ");
         Serial.println(msg.temp);
+        Serial.print("batt: ");
         Serial.println(msg.battery);
     }
 
@@ -160,10 +231,27 @@ void loop(){
     }
     digitalWrite(STATUS_LED_PIN, LOW);
 
-    // Sleep for 10 minutes
-    if (SERIAL_EN)
+    // Sleep 
+    if (SERIAL_EN) {
         Serial.println("Sleeping");
-    delay(600000);
+        delay(50);
+    }
+
+    cli();
+
+    // Enable the watchdog interrupt without a system reset
+    WDTCSR |= 1<<WDIE;
+
+    // Enable sleep mode
+    sleep_enable();
+
+    sei();
+
+    sleep_mode();
+}
+
+ISR(WDT_vect) {
+    sleep_counter++;
 }
 
 /*
