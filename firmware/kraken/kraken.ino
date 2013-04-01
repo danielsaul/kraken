@@ -241,11 +241,13 @@ void loop(){
     // Turn RockBlock off
     rockblock_off();
 
-    if (SERIAL_EN) {
-        if (rockblock_response)
+    if (rockblock_response) {
+        if (SERIAL_EN)
             Serial.println("RB: Sent");
-        else 
+    } else {
+        if (SERIAL_EN)
             Serial.println("RB: Not sent");
+        sleep_counter = sleep_cycles - 225; // Only sleep for 30 min if unsuccessful
     }
 
     if (SERIAL_EN)
