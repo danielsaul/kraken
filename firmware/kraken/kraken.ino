@@ -49,8 +49,6 @@ struct data {
     uint8_t mins;
     uint8_t secs;
 
-    uint32_t uptime;
-    
     int32_t lat;
     int32_t lon;
     int32_t alt;
@@ -207,9 +205,6 @@ void loop(){
     float battery_voltage = 99.99;
     msg.battery = battery_get_voltage();
 
-    // Uptime
-    msg.uptime = millis();
-
     // Print data to serial 
     if (SERIAL_EN) {
         Serial.print("Hr: ");
@@ -218,8 +213,6 @@ void loop(){
         Serial.println(msg.mins);
         Serial.print("Sc: ");
         Serial.println(msg.secs);
-        Serial.print("Up: ");
-        Serial.println(msg.uptime);
         Serial.print("Lat: ");
         Serial.println(msg.lat);
         Serial.print("Lon: ");
