@@ -11,6 +11,6 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-const bool SERIAL_EN = true;
+const bool SERIAL_EN = false;
 
 #endif
