@@ -68,7 +68,7 @@ void setup() {
     // Setup watchdog
     cli();
 
-    //Clear the watchdog reset flag
+    // Clear the watchdog reset flag
     MCUSR &= ~(1<<WDRF);
 
     // Set WDCE so we can change the prescaler
@@ -249,6 +249,10 @@ void loop(){
             Serial.println("RB: Not sent");
         sleep_counter = sleep_cycles - 225; // Only sleep for 30 min if unsuccessful
     }
+
+    // Only sleep for 30 min if deployed in the last 24 hours / 48 transmissions
+    if (msg.counter < 48)
+        sleep_counter = sleep_cycles - 225;
 
     if (SERIAL_EN)
         digitalWrite(STATUS_LED_PIN, LOW);
