@@ -34,9 +34,6 @@ uint8_t TEMP_ADDR[8] = {0x28, 0xB8, 0x90, 0x64, 0x04, 0x00, 0x00, 0x0F};
 //char SD_GPS[] = "GPS.LOG";
 //char SD_IMU[] = "IMU.LOG";
 
-// Send IMU data every X transmissions
-const uint8_t imu_transmissions = 5;
-
 // Sleep counter
 const uint16_t sleep_cycles = 2700; // 2700 = 6 hours
 volatile uint16_t sleep_counter = sleep_cycles; // Initialise at max value
@@ -160,11 +157,13 @@ void loop(){
         Serial.println(msg.counter);
     }
 
-    // Only send IMU data every Nth transmission
-    if (msg.counter % imu_transmissions == 0) {
-        // Get IMU data
-        imu_setup(&msg.imu_x[0], &msg.imu_y[0], &msg.imu_z[0]);
-        imu_sample();
+    if (IMU_EN) {
+        // Only send IMU data every Nth transmission
+        if (msg.counter % IMU_TRANSMISSIONS == 0) {
+            // Get IMU data
+            imu_setup(&msg.imu_x[0], &msg.imu_y[0], &msg.imu_z[0]);
+            imu_sample();
+        }
     }
 
     // GPS
@@ -193,9 +192,10 @@ void loop(){
 
     gps_sleep();
 
-    if (SERIAL_EN)
+    if (SERIAL_EN) {
         Serial.print("Tries: ");
         Serial.println(tries);
+    }
 
     // Get temperature
     float temperature = 99.99;
@@ -232,7 +232,7 @@ void loop(){
         digitalWrite(STATUS_LED_PIN, HIGH);
 
     bool rockblock_response = false;
-    if (msg.counter % imu_transmissions == 0) {
+    if (IMU_EN && (msg.counter % IMU_TRANSMISSIONS == 0)) {
         rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg));
     } else {
         rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg) - sizeof(msg.imu_x) - sizeof(msg.imu_y) - sizeof(msg.imu_z));

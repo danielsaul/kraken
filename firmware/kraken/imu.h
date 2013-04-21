@@ -19,6 +19,11 @@
 #define ACCEL_ADDR 0x53
 #define GYRO_ADDR 0x68
 
+const bool IMU_EN = true;
+
+// Send IMU data every X transmissions
+const uint8_t IMU_TRANSMISSIONS = 5;
+
 void imu_setup(int16_t* imu_xs, int16_t* imu_ys, int16_t* imu_zs);
 void imu_sample();
 void imu_measure();
