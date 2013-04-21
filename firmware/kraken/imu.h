@@ -19,7 +19,7 @@
 #define ACCEL_ADDR 0x53
 #define GYRO_ADDR 0x68
 
-const bool IMU_EN = true;
+const bool IMU_EN = false;
 
 // Send IMU data every X transmissions
 const uint8_t IMU_TRANSMISSIONS = 5;
