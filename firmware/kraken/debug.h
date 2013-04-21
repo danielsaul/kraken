@@ -11,6 +11,7 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
+// Enable/disable serial debugging
 const bool SERIAL_EN = true;
 
 #endif

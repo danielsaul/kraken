@@ -19,6 +19,7 @@
 #define ACCEL_ADDR 0x53
 #define GYRO_ADDR 0x68
 
+// Enable/disable the IMU
 const bool IMU_EN = true;
 
 // Send IMU data every X transmissions
