@@ -75,10 +75,6 @@ void rockblock_on() {
     // Set variables
     receivedIdx = 0;
 
-    // Wait 5secs to ensure modem is fully powered down before turning on again
-    unsigned long starttime = millis();
-    while(millis() < starttime + 5000){}
-
     if(SERIAL_EN)
         Serial.println("RB: Turning Sat Modem On...");
 
