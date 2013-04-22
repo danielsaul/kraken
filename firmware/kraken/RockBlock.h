@@ -28,10 +28,20 @@ const uint8_t minimumSignalRequired = 2;
 const uint16_t maxTelemetryLength = 340;
 const uint16_t responseLost = 30000;
 
+char receivedCmd[100];
+int receivedIdx;
+
 void rockblock_init();
 bool rockblock_send(unsigned char* msg, int length);
 bool rockblock_sendmsg(unsigned char* msg, int length);
 void rockblock_on();
 void rockblock_off();
+
+bool sendCommandandExpectPrefix(const char * command, const char * response, unsigned long timeout);
+void sendCommand(const char * command);
+bool expectResponse(const char * response, unsigned long timeout);
+void checkUnexpectedResponse();
+bool receiveCmdCRLF(unsigned long timeout);
+void clearReceivedCmd();
 
 #endif
