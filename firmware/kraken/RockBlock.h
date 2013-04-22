@@ -31,6 +31,14 @@ const uint16_t responseLost = 30000;
 char receivedCmd[100];
 int receivedIdx;
 
+bool ring;
+bool sendQueued;
+bool sendStatus;
+int rcvStatus;
+int rcvLength;
+int rcvQueue;
+int netQueue;
+
 void rockblock_init();
 bool rockblock_send(unsigned char* msg, int length);
 bool rockblock_sendmsg(unsigned char* msg, int length);
@@ -43,5 +51,8 @@ bool expectResponse(const char * response, unsigned long timeout);
 void checkUnexpectedResponse();
 bool receiveCmdCRLF(unsigned long timeout);
 void clearReceivedCmd();
+
+int checkSignal();
+bool isSatAvailable();
 
 #endif

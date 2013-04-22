@@ -19,53 +19,106 @@ void rockblock_init() {
     rockblock_off();
 }
 
-bool rockblock_send(unsigned char *msg, int length) {
-    uint8_t tries = 0;
-    bool success = false;
-
-    while (tries < 15 && !success) {
-        if (tries > 0) {
-            if (SERIAL_EN)
-                Serial.println("RB: Retry in 1 min");
-            delay(60000);
+bool loadMessage(unsigned char *msg, int length){
+    while(uint8_t tries = 0; tries < 15; tries++){
+        unsigned long checksum = 0;
+        char buf[15];
+        for(int i = 0; i < length; i++){
+            checksum += msg[i];
         }
-        success = rockblock_sendmsg(msg, length);
-        tries++;
-    }
+        byte checksumHighByte = highByte(checksum);
+        byte checksumLowByte = lowByte(checksum);
+        snprintf(buf, sizeof(buf), "AT+SBDWB=%d", length);
+        if(!sendCommandandExpectPrefix("READY", responseLost)) continue;
 
-    return success;
-}
-
-bool rockblock_sendmsg(unsigned char* msg, int length) {
-    bool sat = iridium.isSatAvailable();
-    int sig = iridium.checkSignal();
-
-    if (SERIAL_EN) {
-        if(sat) Serial.println("RB: Sat");
-
-        Serial.print("RB: Sig ");
-        Serial.println(sig);
-    }
-
-    if(sat && (sig >= minimumSignalRequired)) {
-        uint8_t i = 0;
-        while(!iridium.loadMOMessage(msg, length)) {
-            i++;
-            if (i > 5) return false;
-        }
-
-        if (SERIAL_EN)
-            Serial.println("RB: Loaded");
-
-        iridium.initiateSBDSession(responseLost);
-
-        bool lastResult = iridium.lastSessionResult();
-
-        if((lastResult >= 0) && (lastResult <= 4)) {
+        checksum = rb.write(msg, length);
+        checksum += rb.write(&checksumHighByte, 1);
+        checksum += rb.write(&checksumLowByte, 1);
+        if(checksum != length+2) continue;
+        rb.println();
+        if(expectResponse("0", responseLost)){
+            if(SERIAL_EN)
+                Serial.println("RB: Message loaded");
+            sendQueued = true;
             return true;
-        } 
+        }
     }
     return false;
+}
+
+bool initiateSession(){
+    
+    if(!isSatAvailable() || checkSignal() < minimumSignalRequired) return false;
+    if(SERIAL_EN)
+        Serial.println("RB: Satellite Available");
+
+    bool result = false;
+    if(ring){
+        result = sendCommandandExpectPrefix("AT+SBDIXA", "+SBDIX:", responseLost);
+    }else{
+        result = sendCommandandExpectPrefix("AT+SBDIX", "+SBDIX:", responseLost);
+    }
+    
+    if(result){
+        parseSBDIX();
+    }
+
+    ring = false;
+    return result;
+}
+
+bool getNextVal(char * p, char * n, int * v){
+        int __tmp;                                              
+        /* skip white spaces */                                 
+        while(*p && *p == ' ') p++;                             
+        /* convert MO status to int, n point to first char */   
+        /* after the number */                                  
+        __tmp = strtol(p, &n, 10);                              
+        if ((v))                                                
+            *(v) = __tmp;                                   
+        /* if p == n then no number was found */                
+        if (p == n) /* no number */                             
+            return false;                                   
+        p = n;                                                  
+        /* have to be at EOL or at a ',' */                     
+        if (*p != ',' && *p != '\0') return false;              
+        /* p should point at start of next number or space */  
+        p++;                                                    
+        return true;
+}
+
+void parseSBDIX(){
+    char *p, *n = NULL;
+    p = receivedCmd + 7; // skip +SBDIX:
+    /* <MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MT queued> */
+    int mo_st = -1, mt_st, mt_len, mt_q;
+    
+    if(!getNextVal(&mo_st)) return;
+    if(sendQueued && mo_st >= 0 && mo_st <= 4){
+        sendStatus = true;
+    }else{
+        sendStatus = false;
+    }
+    sendQueued = false;
+    
+    p = strchr(p, ',');
+    p++;
+
+    if(!getNextVal(&mt_st)) return;
+    rcvStatus = mt_st;
+
+    p = strchr(p, ',');
+    p++;
+
+    if(!getNextVal(&mt_len)) return;
+    if(!getNextVal(&mt_q)) return;
+    netQueue = mt_q;
+
+    if(mt_st == 1){
+        rcvQueue = mt_q + 1;
+        rcvLength = mt_len;
+    }
+   //expectResponse("OK", responseLost); 
 }
 
 void rockblock_on() {
@@ -122,34 +175,22 @@ bool expectResponse(const char * response, unsigned long timeout){
     unsigned long starttime = millis();
 
     do {
+        clearReceivedCmd();
+
         unsigned long timeleft = timeout - (millis() - starttime);
         if (timeleft == 0) timeleft = 1;
         if (!receiveCmdCRLF(timeleft)) continue;
    
-        if(strncmp(receivedCmd, response, strlen(response) == 0)){
-            clearReceivedCmd();
-            return true;
-        }
+        if(strncmp(receivedCmd, response, strlen(response) == 0)) return true;
 
         // Didn't match, see if it was anything else
-        checkUnexpectedResponse();
-        clearReceivedCmd();
+        if(strncmp(receivedCmd, "SBDRING", 8) == 0){
+            ring = true;
+        }
 
     } while(timeout == 0 || millis() - starttime < timeout);
 
     return false;
-}
-
-void checkUnexpectedResponse(){
-   if(strncmp(receivedCmd, "+SBDIX:", 7) == 0){
-        //SBDIX response
-   }
-   if(strncmp(receivedCmd, "SBDRING", 8) == 0){
-
-   }
-   if(strncmp(receivedCmd, "+CIEV:", 6) == 0){
-
-   }
 }
 
 // We want an entire line with \n\r at the end
@@ -185,4 +226,21 @@ bool receiveCmdCRLF(unsigned long timeout){
 void clearReceivedCmd(){
     receivedIdx = 0;
     receivedCmd[0] = '\0';
+}
+
+
+int checkSignal(){
+    if(sendCommandandExpectPrefix("AT+CSQ", "+CSQ", 50000)){
+        return receivedCmd[5] - '0';
+    }else{
+        return '\0';
+    }
+}
+
+bool isSatAvailable(){
+    if(digitalRead(RB_NET) == HIGH){
+        return true;
+    }else{
+        return false;
+    }
 }
