@@ -64,6 +64,12 @@ struct data {
     int16_t imu_z[50];
 };
 
+// Iridium Received Msg struct
+struct rcvdata {
+    uint8_t cmd;
+    uint16_t value;
+};
+
 void setup() {
     // Setup watchdog
     cli();
@@ -147,6 +153,7 @@ void loop(){
 
     // Data struct
     data msg;
+    rcvdata rcv;
 
     // Counter +1
     counter_inc();
@@ -234,17 +241,30 @@ void loop(){
     if (SERIAL_EN)
         digitalWrite(STATUS_LED_PIN, HIGH);
 
-    bool rockblock_response = false;
+    // Load message to be sent into RockBlock Buffer
+    bool response = false;
     if (IMU_EN && (msg.counter % IMU_TRANSMISSIONS == 0)) {
-        rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg));
+        loadMessage((unsigned char*) &msg, sizeof(msg));
     } else {
-        rockblock_response = rockblock_send((unsigned char*) &msg, sizeof(msg) - sizeof(msg.imu_x) - sizeof(msg.imu_y) - sizeof(msg.imu_z));
+        loadMessage((unsigned char*) &msg, sizeof(msg) - sizeof(msg.imu_x) - sizeof(msg.imu_y) - sizeof(msg.imu_z));
     }
 
-    // Turn RockBlock off
-    rockblock_off();
+    // Start a session with Iridium
+    tries = 0;
+    bool success = false;
+    while (tries < 15 && !success) {
+        if (tries > 0) {
+            if (SERIAL_EN)
+                Serial.println("RB: Retry session in 1 min");
+            delay(60000);
+        }
+        success = initiateSession();
+        tries++;
+    }
 
-    if (rockblock_response) {
+    // Check iridium session result
+    // Send message result
+    if (messageSent()) {
         if (SERIAL_EN)
             Serial.println("RB: Sent");
     } else {
@@ -252,6 +272,25 @@ void loop(){
             Serial.println("RB: Not sent");
         sleep_counter = sleep_cycles - 225; // Only sleep for 30 min if unsuccessful
     }
+    
+    // Any messages to receive?
+    if(SERIAL_EN)
+        Serial.print("RB: Messages to receive - ");
+        Serial.println(messagesToReceive());
+    unsigned long endtime = millis() + (60000 * 5); //Timeout: 5mins
+    while(messagesToReceive() > 0 && millis() < endtime){
+        if(messageAvailableToRead()){
+            //Message in Iridium buffer to read
+            int result = readMessage((unsigned char*) &rcv, sizeof(rcv));
+            if(result != -1) executeRcvdCommand(rcv.cmd, rcv.value);
+        }
+        if(messagesWaitingOnNetwork() > 0){
+            initiateSession();
+        }
+    }
+
+    // Turn RockBlock off
+    rockblock_off();
 
     // Only sleep for 30 min if deployed in the last 24 hours / 48 transmissions
     if (msg.counter < 48)
@@ -281,6 +320,17 @@ void loop(){
 
 ISR(WDT_vect) {
     sleep_counter++;
+}
+
+void executeRcvdCommand(uint8_t cmd, uint16_t val){
+
+    if(SERIAL_EN){
+        Serial.print("Command: ");
+        Serial.println(cmd);
+        Serial.print("Value: ");
+        Serial.println(val);
+    }
+
 }
 
 /*

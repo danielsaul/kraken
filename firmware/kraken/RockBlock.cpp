@@ -11,11 +11,19 @@
 #include "RockBlock.h"
 
 SoftwareSerial rb(RB_RX, RB_TX);
+char receivedCmd[100];
+int receivedIdx;
+bool ring;
+bool sendQueued;
+bool sendStatus;
+int rcvStatus;
+int rcvLength;
+int rcvQueue;
+int netQueue;
+
 
 void rockblock_init() {
     pinMode(RB_SLEEP, OUTPUT);
-    rockblock_on();
-    initiateSession();
     rockblock_off();
 }
 
@@ -29,6 +37,10 @@ void rockblock_on() {
     rcvQueue = 0;
     netQueue = 0;
     rcvLength = 0;
+
+    // Wait 5secs to ensure modem is fully powered down before turning on again
+    unsigned long starttime = millis();
+    while(millis() < starttime + 5000){}
 
     if(SERIAL_EN)
         Serial.println("RB: Turning Sat Modem On...");
@@ -49,7 +61,7 @@ void rockblock_on() {
     // Turn on incoming message alert?
     
     if(SERIAL_EN)
-        Serial.println("RB: Setup complete");
+        Serial.println("RB: Turned on");
 
 }
 
@@ -75,6 +87,8 @@ bool initiateSession(){
     }
     
     if(result){
+        if(SERIAL_EN)
+            Serial.println(receivedCmd);
         parseSBDIX();
     }
 
@@ -82,7 +96,7 @@ bool initiateSession(){
 }
 
 bool loadMessage(unsigned char *msg, int length){
-    for(uint8_t tries = 0; tries < 15; tries++){
+    for(uint8_t tries = 0; tries < 5; tries++){
         unsigned long checksum = 0;
         char buf[15];
         for(int i = 0; i < length; i++){
@@ -91,7 +105,7 @@ bool loadMessage(unsigned char *msg, int length){
         byte checksumHighByte = highByte(checksum);
         byte checksumLowByte = lowByte(checksum);
         snprintf(buf, sizeof(buf), "AT+SBDWB=%d", length);
-        if(!expectResponse("READY", responseLost)) continue;
+        if(!sendCommandandExpectPrefix(buf, "READY", responseLost)) continue;
 
         checksum = rb.write(msg, length);
         checksum += rb.write(&checksumHighByte, 1);
@@ -108,11 +122,11 @@ bool loadMessage(unsigned char *msg, int length){
     return false;
 }
 
-int readMessage(unsigned char *msg){
+int readMessage(unsigned char *msg, int maxLength){
     
     sendCommand("AT+SBDRB");
 
-    endtime = millis() + responseLost;
+    unsigned long endtime = millis() + responseLost;
     while(!rb.available()){
         if (millis() > endtime) return -1;
     }
@@ -125,6 +139,8 @@ int readMessage(unsigned char *msg){
 
     msgLength = (inChar = rb.read()) << 8;
     msgLength = (inChar |= rb.read());
+
+    if (msgLength > maxLength) return -1;
 
     while(bytesRead < msgLength){
         inChar = rb.read();
@@ -143,59 +159,65 @@ int readMessage(unsigned char *msg){
     return bytesRead;
 }
 
+#define NEXT_VAL(v) \
+do { \
+        int __tmp;                                              \
+        /* skip white spaces */                                 \
+        while(*p && *p == ' ') p++;                             \
+        /* convert MO status to int, n point to first char */   \
+        /* after the number */                                  \
+        v = strtol(p, &n, 10);                                  \
+        /* if p == n then no number was found */                \
+        if (p == n) /* no number */                             \
+            return;                                             \
+        p = n;                                                  \
+        /* have to be at EOL or at a ',' */                     \
+        if (*p != ',' && *p != '\0') return;                    \
+        /* p should point at start of next number or space */   \
+        p++;                                                    \
+} while (0)
 
 void parseSBDIX(){
     char *p, *n = NULL;
     p = receivedCmd + 7; // skip +SBDIX:
     /* <MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MT queued> */
     int mo_st = -1, mt_st, mt_len, mt_q;
-    
-    if(!getNextVal(&mo_st)) return;
-    if(sendQueued && mo_st >= 0 && mo_st <= 4){
-        sendStatus = true;
-    }else{
-        sendStatus = false;
-    }
-    sendQueued = false;
-    
+    NEXT_VAL(mo_st);
+    Serial.println(mo_st);
+
     p = strchr(p, ',');
     p++;
 
-    if(!getNextVal(&mt_st)) return;
+    NEXT_VAL(mt_st);
     rcvStatus = mt_st;
-
+    Serial.println(mt_st);
     p = strchr(p, ',');
     p++;
 
-    if(!getNextVal(&mt_len)) return;
-    if(!getNextVal(&mt_q)) return;
+    NEXT_VAL(mt_len);
+    Serial.println(mt_len);
+
+    NEXT_VAL(mt_q);
+    Serial.println(mt_q);
+
     netQueue = mt_q;
 
     if(mt_st == 1){
         rcvQueue = mt_q + 1;
         rcvLength = mt_len;
     }
-   //expectResponse("OK", responseLost); 
+    
+   expectResponse("OK", responseLost); 
+   
+    if(sendQueued && mo_st >= 0 && mo_st <= 4){
+        sendCommandandExpectPrefix("AT+SBDD0", "OK", responseLost);
+        sendStatus = true;
+    }else{
+        sendStatus = false;
+    }
+    sendQueued = false;
 }
-bool getNextVal(char * p, char * n, int * v){
-        int __tmp;                                              
-        /* skip white spaces */                                 
-        while(*p && *p == ' ') p++;                             
-        /* convert MO status to int, n point to first char */   
-        /* after the number */                                  
-        __tmp = strtol(p, &n, 10);                              
-        if ((v))                                                
-            *(v) = __tmp;                                   
-        /* if p == n then no number was found */                
-        if (p == n) /* no number */                             
-            return false;                                   
-        p = n;                                                  
-        /* have to be at EOL or at a ',' */                     
-        if (*p != ',' && *p != '\0') return false;              
-        /* p should point at start of next number or space */  
-        p++;                                                    
-        return true;
-}
+
 
 
 bool sendCommandandExpectPrefix(const char * command, const char * response, unsigned long timeout) {
@@ -213,13 +235,11 @@ bool expectResponse(const char * response, unsigned long timeout){
 
     do {
         clearReceivedCmd();
-
         unsigned long timeleft = timeout - (millis() - starttime);
         if (timeleft == 0) timeleft = 1;
         if (!receiveCmdCRLF(timeleft)) continue;
-   
-        if(strncmp(receivedCmd, response, strlen(response) == 0)) return true;
-
+        if(strncmp(receivedCmd, response, strlen(response)) == 0) return true;
+    
         // Didn't match, see if it was anything else
         if(strncmp(receivedCmd, "SBDRING", 8) == 0){
             ring = true;
@@ -276,6 +296,26 @@ int checkSignal(){
 
 bool isSatAvailable(){
     if(digitalRead(RB_NET) == HIGH){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+bool messageSent(){
+    return sendStatus;
+}
+
+int messagesToReceive(){
+    return rcvQueue;
+}
+
+int messagesWaitingOnNetwork(){
+    return netQueue;
+}
+
+bool messageAvailableToRead(){
+    if(rcvStatus == 1){
         return true;
     }else{
         return false;
