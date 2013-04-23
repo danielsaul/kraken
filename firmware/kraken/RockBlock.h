@@ -12,7 +12,6 @@
 #define ROCKBLOCK_H
 
 #include "Arduino.h"
-#include "Iridium9602.h"
 #include <SoftwareSerial.h>
 #include "debug.h"
 
@@ -40,15 +39,20 @@ int rcvQueue;
 int netQueue;
 
 void rockblock_init();
-bool rockblock_send(unsigned char* msg, int length);
-bool rockblock_sendmsg(unsigned char* msg, int length);
 void rockblock_on();
 void rockblock_off();
+
+bool initiateSession();
+bool loadMessage(unsigned char *msg, int length);
+int readMessage(unsigned char *msg);
+
+bool getNextVal(char * p, char * n, int * v);
+void parseSBDIX();
 
 bool sendCommandandExpectPrefix(const char * command, const char * response, unsigned long timeout);
 void sendCommand(const char * command);
 bool expectResponse(const char * response, unsigned long timeout);
-void checkUnexpectedResponse();
+
 bool receiveCmdCRLF(unsigned long timeout);
 void clearReceivedCmd();
 

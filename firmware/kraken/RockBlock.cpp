@@ -11,16 +11,78 @@
 #include "RockBlock.h"
 
 SoftwareSerial rb(RB_RX, RB_TX);
-Iridium9602 iridium = Iridium9602(rb);
 
 void rockblock_init() {
     pinMode(RB_SLEEP, OUTPUT);
-    digitalWrite(RB_SLEEP, HIGH); // Turn RB on so if can be powered off without timing out
+    rockblock_on();
+    initiateSession();
     rockblock_off();
 }
 
+void rockblock_on() {
+    rb.begin(19200);
+
+    // Set variables
+    receivedIdx = 0;
+    ring = false;
+    sendQueued = false;
+    rcvQueue = 0;
+    netQueue = 0;
+    rcvLength = 0;
+
+    if(SERIAL_EN)
+        Serial.println("RB: Turning Sat Modem On...");
+
+    digitalWrite(RB_SLEEP, HIGH);
+    while(!sendCommandandExpectPrefix("AT", "OK", 500)){}
+
+    if(SERIAL_EN)
+        Serial.println("RB: Responding");
+
+    sendCommandandExpectPrefix("ATE0", "OK", 1000);     // Serial Character Echo Off
+    sendCommandandExpectPrefix("AT&K0", "OK", 1000);    // No flow control handshaking
+    sendCommandandExpectPrefix("ATQ0", "OK", 1000);     // Turn responses on
+    // Turn off incoming message alert?
+    sendCommandandExpectPrefix("AT&W0", "OK", 1000);    // Write defaults to modem & flush to eeprom
+    sendCommandandExpectPrefix("AT&Y0", "OK", 1000);    // Set default reset Profile
+    // Set indicator reporting to true?
+    // Turn on incoming message alert?
+    
+    if(SERIAL_EN)
+        Serial.println("RB: Setup complete");
+
+}
+
+void rockblock_off() {
+    sendCommandandExpectPrefix("AT*F", "OK", 10000);
+    digitalWrite(RB_SLEEP, LOW);
+    if(SERIAL_EN)
+        Serial.println("RB: Turned off");
+}
+
+bool initiateSession(){
+    
+    if(!isSatAvailable() || checkSignal() < minimumSignalRequired) return false;
+    if(SERIAL_EN)
+        Serial.println("RB: Satellite Available");
+
+    bool result = false;
+    if(ring){
+        result = sendCommandandExpectPrefix("AT+SBDIXA", "+SBDIX:", responseLost);
+        ring = false;
+    }else{
+        result = sendCommandandExpectPrefix("AT+SBDIX", "+SBDIX:", responseLost);
+    }
+    
+    if(result){
+        parseSBDIX();
+    }
+
+    return result;
+}
+
 bool loadMessage(unsigned char *msg, int length){
-    while(uint8_t tries = 0; tries < 15; tries++){
+    for(uint8_t tries = 0; tries < 15; tries++){
         unsigned long checksum = 0;
         char buf[15];
         for(int i = 0; i < length; i++){
@@ -29,7 +91,7 @@ bool loadMessage(unsigned char *msg, int length){
         byte checksumHighByte = highByte(checksum);
         byte checksumLowByte = lowByte(checksum);
         snprintf(buf, sizeof(buf), "AT+SBDWB=%d", length);
-        if(!sendCommandandExpectPrefix("READY", responseLost)) continue;
+        if(!expectResponse("READY", responseLost)) continue;
 
         checksum = rb.write(msg, length);
         checksum += rb.write(&checksumHighByte, 1);
@@ -46,46 +108,41 @@ bool loadMessage(unsigned char *msg, int length){
     return false;
 }
 
-bool initiateSession(){
+int readMessage(unsigned char *msg){
     
-    if(!isSatAvailable() || checkSignal() < minimumSignalRequired) return false;
-    if(SERIAL_EN)
-        Serial.println("RB: Satellite Available");
+    sendCommand("AT+SBDRB");
 
-    bool result = false;
-    if(ring){
-        result = sendCommandandExpectPrefix("AT+SBDIXA", "+SBDIX:", responseLost);
-    }else{
-        result = sendCommandandExpectPrefix("AT+SBDIX", "+SBDIX:", responseLost);
-    }
-    
-    if(result){
-        parseSBDIX();
+    endtime = millis() + responseLost;
+    while(!rb.available()){
+        if (millis() > endtime) return -1;
     }
 
-    ring = false;
-    return result;
+    unsigned char inChar = 0;
+    int bytesRead = 0;
+    unsigned long checksum = 0;
+    unsigned long rcvdChecksum = 0;
+    unsigned long msgLength = 0;
+
+    msgLength = (inChar = rb.read()) << 8;
+    msgLength = (inChar |= rb.read());
+
+    while(bytesRead < msgLength){
+        inChar = rb.read();
+        msg[bytesRead++] = inChar;
+        checksum += inChar;
+    }
+
+    rcvdChecksum = (inChar = rb.read()) << 8;
+    rcvdChecksum |= (inChar = rb.read());
+    if(rcvdChecksum != checksum) return -1;
+        
+    sendCommandandExpectPrefix("AT+SBDD1", "OK", responseLost);
+    rcvLength = 0;
+    rcvQueue--;
+
+    return bytesRead;
 }
 
-bool getNextVal(char * p, char * n, int * v){
-        int __tmp;                                              
-        /* skip white spaces */                                 
-        while(*p && *p == ' ') p++;                             
-        /* convert MO status to int, n point to first char */   
-        /* after the number */                                  
-        __tmp = strtol(p, &n, 10);                              
-        if ((v))                                                
-            *(v) = __tmp;                                   
-        /* if p == n then no number was found */                
-        if (p == n) /* no number */                             
-            return false;                                   
-        p = n;                                                  
-        /* have to be at EOL or at a ',' */                     
-        if (*p != ',' && *p != '\0') return false;              
-        /* p should point at start of next number or space */  
-        p++;                                                    
-        return true;
-}
 
 void parseSBDIX(){
     char *p, *n = NULL;
@@ -120,46 +177,26 @@ void parseSBDIX(){
     }
    //expectResponse("OK", responseLost); 
 }
-
-void rockblock_on() {
-    rb.begin(19200);
-    //iridium.powerOn();
-
-    // Set variables
-    receivedIdx = 0;
-
-    if(SERIAL_EN)
-        Serial.println("RB: Turning Sat Modem On...");
-
-    digitalWrite(RB_SLEEP, HIGH);
-    while(!sendCommandandExpectPrefix("AT", "OK", 500)){}
-
-    if(SERIAL_EN)
-        Serial.println("RB: Responding");
-
-    sendCommandandExpectPrefix("ATE0", "OK", 1000);     // Serial Character Echo Off
-    sendCommandandExpectPrefix("AT&K0", "OK", 1000);    // No flow control handshaking
-    sendCommandandExpectPrefix("ATQ0", "OK", 1000);     // Turn responses on
-    // Turn off incoming message alert?
-    sendCommandandExpectPrefix("AT&W0", "OK", 1000);    // Write defaults to modem & flush to eeprom
-    sendCommandandExpectPrefix("AT&Y0", "OK", 1000);    // Set default reset Profile
-    // Set indicator reporting to true?
-    // Turn on incoming message alert?
-    
-    if(SERIAL_EN)
-        Serial.println("RB: Setup complete");
-
+bool getNextVal(char * p, char * n, int * v){
+        int __tmp;                                              
+        /* skip white spaces */                                 
+        while(*p && *p == ' ') p++;                             
+        /* convert MO status to int, n point to first char */   
+        /* after the number */                                  
+        __tmp = strtol(p, &n, 10);                              
+        if ((v))                                                
+            *(v) = __tmp;                                   
+        /* if p == n then no number was found */                
+        if (p == n) /* no number */                             
+            return false;                                   
+        p = n;                                                  
+        /* have to be at EOL or at a ',' */                     
+        if (*p != ',' && *p != '\0') return false;              
+        /* p should point at start of next number or space */  
+        p++;                                                    
+        return true;
 }
 
-void rockblock_off() {
-    //iridium.powerOff();
-    sendCommandandExpectPrefix("AT*F", "OK", 10000);
-    digitalWrite(RB_SLEEP, LOW);
-    if(SERIAL_EN)
-        Serial.println("RB: Turned off");
-}
-
-/////
 
 bool sendCommandandExpectPrefix(const char * command, const char * response, unsigned long timeout) {
     sendCommand(command);
