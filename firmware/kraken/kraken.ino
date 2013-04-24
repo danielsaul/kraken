@@ -167,9 +167,9 @@ void loop(){
         Serial.println(msg.counter);
     }
 
-    if (IMU_EN) {
+    if (imuEnabled()) {
         // Only send IMU data every Nth transmission
-        if (msg.counter % IMU_TRANSMISSIONS == 0) {
+        if (msg.counter % imuFrequency() == 0) {
             // Get IMU data
             imu_setup(&msg.imu_x[0], &msg.imu_y[0], &msg.imu_z[0]);
             imu_sample();
@@ -243,7 +243,7 @@ void loop(){
 
     // Load message to be sent into RockBlock Buffer
     bool response = false;
-    if (IMU_EN && (msg.counter % IMU_TRANSMISSIONS == 0)) {
+    if (imuEnabled() && (msg.counter % imuFrequency() == 0)) {
         loadMessage((unsigned char*) &msg, sizeof(msg));
     } else {
         loadMessage((unsigned char*) &msg, sizeof(msg) - sizeof(msg.imu_x) - sizeof(msg.imu_y) - sizeof(msg.imu_z));
@@ -282,6 +282,8 @@ void loop(){
         if(messageAvailableToRead()){
             //Message in Iridium buffer to read
             int result = readMessage((unsigned char*) &rcv, sizeof(rcv));
+            // Correct byte order
+            rcv.value = ((rcv.value & 0xff) << 8) | ((rcv.value & 0xff00) >> 8);
             if(result != -1) executeRcvdCommand(rcv.cmd, rcv.value);
         }
         if(messagesWaitingOnNetwork() > 0){
@@ -341,19 +343,23 @@ void executeRcvdCommand(uint8_t cmd, uint16_t val){
 
         // Toggle IMU on/off
         case 0xBB:
+            if(val){
+                setImuEnabled(true);
+            }else{
+                setImuEnabled(false);
+            }
+            if(SERIAL_EN)
+                Serial.println("IMU toggled.");
             break;
 
         // Change IMU update frequency
         case 0xCC:
+            if(val > 0 && val < 255){
+                setImuFrequency(val);
+            }
+            if(SERIAL_EN)
+                Serial.println("IMU frequency changed.");           
             break;
-
-        // Toggle SD card logging
-        case 0xDD:
-            break;
-
-        // Transmit last line of log
-
-
     }
 
 }
