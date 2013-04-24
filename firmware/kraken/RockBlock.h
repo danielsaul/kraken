@@ -51,6 +51,7 @@ bool isSatAvailable();
 
 bool messageSent();
 int messagesToReceive();
+int messagesWaitingOnNetwork();
 bool messageAvailableToRead();
 
 #endif
