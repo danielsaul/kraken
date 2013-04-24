@@ -183,22 +183,18 @@ void parseSBDIX(){
     /* <MO status>,<MOMSN>,<MT status>,<MTMSN>,<MT length>,<MT queued> */
     int mo_st = -1, mt_st, mt_len, mt_q;
     NEXT_VAL(mo_st);
-    Serial.println(mo_st);
 
     p = strchr(p, ',');
     p++;
 
     NEXT_VAL(mt_st);
     rcvStatus = mt_st;
-    Serial.println(mt_st);
     p = strchr(p, ',');
     p++;
 
     NEXT_VAL(mt_len);
-    Serial.println(mt_len);
 
     NEXT_VAL(mt_q);
-    Serial.println(mt_q);
 
     netQueue = mt_q;
 
