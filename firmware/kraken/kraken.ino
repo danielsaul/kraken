@@ -38,7 +38,7 @@ uint8_t TEMP_ADDR[8] = {0x28, 0xFE, 0xD5, 0x64, 0x04, 0x00, 0x00, 0xF3};     //K
 //char SD_IMU[] = "IMU.LOG";
 
 // Sleep counter
-const uint16_t sleep_cycles = 2700; // 2700 = 6 hours
+volatile uint16_t sleep_cycles = 2700; // 2700 = 6 hours
 volatile uint16_t sleep_counter = sleep_cycles; // Initialise at max value
 
 // Iridium Data Struct
@@ -329,6 +329,31 @@ void executeRcvdCommand(uint8_t cmd, uint16_t val){
         Serial.println(cmd);
         Serial.print("Value: ");
         Serial.println(val);
+    }
+    switch (cmd){
+        
+        // Change update frequency
+        case 0xAA:
+            sleep_cycles = val;
+            if(SERIAL_EN)
+                Serial.println("Update frequency changed.");
+            break;
+
+        // Toggle IMU on/off
+        case 0xBB:
+            break;
+
+        // Change IMU update frequency
+        case 0xCC:
+            break;
+
+        // Toggle SD card logging
+        case 0xDD:
+            break;
+
+        // Transmit last line of log
+
+
     }
 
 }

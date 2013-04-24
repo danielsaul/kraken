@@ -15,6 +15,12 @@ int16_t* _imu_xs;
 int16_t* _imu_ys;
 int16_t* _imu_zs;
 
+// Enable/disable the IMU
+bool IMU_EN = false;
+
+// Send IMU data every X transmissions
+uint8_t IMU_TRANSMISSIONS = 5;
+
 /*
     Set up the IMU. This should be called in the main setup().
 */
