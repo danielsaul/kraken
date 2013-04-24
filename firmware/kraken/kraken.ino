@@ -274,9 +274,10 @@ void loop(){
     }
     
     // Any messages to receive?
-    if(SERIAL_EN)
+    if(SERIAL_EN){
         Serial.print("RB: Messages to receive - ");
         Serial.println(messagesToReceive());
+    }
     unsigned long endtime = millis() + (60000 * 5); //Timeout: 5mins
     while(messagesToReceive() > 0 && millis() < endtime){
         if(messageAvailableToRead()){
