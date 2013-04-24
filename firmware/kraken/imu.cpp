@@ -17,9 +17,21 @@ int16_t* _imu_zs;
 
 // Enable/disable the IMU
 bool IMU_EN = false;
+bool imuEnabled(){
+    return IMU_EN;
+}
+void setImuEnabled(bool a){
+    IMU_EN = a;
+}
 
 // Send IMU data every X transmissions
 uint8_t IMU_TRANSMISSIONS = 5;
+uint8_t imuFrequency(){
+    return IMU_TRANSMISSIONS;
+}
+void setImuFrequency(uint8_t i){
+    IMU_TRANSMISSIONS = i;
+}
 
 /*
     Set up the IMU. This should be called in the main setup().

@@ -20,6 +20,10 @@
 #define GYRO_ADDR 0x68
 
 // IMU_EN & IMU_TRANSMISSIONS now in imu.cpp
+bool imuEnabled();
+void setImuEnabled(bool a);
+uint8_t imuFrequency();
+void setImuFrequency(uint8_t i);
 
 void imu_setup(int16_t* imu_xs, int16_t* imu_ys, int16_t* imu_zs);
 void imu_sample();
