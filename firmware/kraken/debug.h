@@ -12,6 +12,6 @@
 #define DEBUG_H
 
 // Enable/disable serial debugging
-const bool SERIAL_EN = false;
+const bool SERIAL_EN = true;
 
 #endif
