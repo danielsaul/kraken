@@ -361,6 +361,13 @@ void executeRcvdCommand(uint8_t cmd, uint16_t val){
             if(SERIAL_EN)
                 Serial.println("IMU frequency changed.");           
             break;
+        
+        // Change counter
+        case 0xDD:
+            counter_set(val);
+            if(SERIAL_EN)
+                Serial.println("Counter changed.");
+            break;;
     }
 
 }
