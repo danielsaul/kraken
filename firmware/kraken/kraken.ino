@@ -329,7 +329,7 @@ void executeRcvdCommand(uint8_t cmd, uint16_t val){
 
     if(SERIAL_EN){
         Serial.print("Command: ");
-        Serial.println(cmd);
+        Serial.println(cmd, HEX);
         Serial.print("Value: ");
         Serial.println(val);
     }
