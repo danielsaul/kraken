@@ -15,22 +15,20 @@ int16_t* _imu_xs;
 int16_t* _imu_ys;
 int16_t* _imu_zs;
 
-// Enable/disable the IMU
-bool IMU_EN = false;
+// Enable/disable the IMU 
 bool imuEnabled(){
-    return IMU_EN;
+    return EEPROM.read(EEPROM_IMU_EN);
 }
 void setImuEnabled(bool a){
-    IMU_EN = a;
+    EEPROM.write(EEPROM_IMU_EN, (byte) (a));
 }
 
 // Send IMU data every X transmissions
-uint8_t IMU_TRANSMISSIONS = 5;
 uint8_t imuFrequency(){
-    return IMU_TRANSMISSIONS;
+    return EEPROM.read(EEPROM_IMU_FREQ);
 }
 void setImuFrequency(uint8_t i){
-    IMU_TRANSMISSIONS = i;
+    EEPROM.write(EEPROM_IMU_FREQ, (byte) (i));
 }
 
 /*

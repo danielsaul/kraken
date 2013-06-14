@@ -15,11 +15,15 @@
 #include "Wire.h"
 #include "TimerOne.h"
 #include "debug.h"
+#include <EEPROM.h>
 
 #define ACCEL_ADDR 0x53
 #define GYRO_ADDR 0x68
 
 // IMU_EN & IMU_TRANSMISSIONS now in imu.cpp
+#define EEPROM_IMU_EN 2
+#define EEPROM_IMU_FREQ 3
+
 bool imuEnabled();
 void setImuEnabled(bool a);
 uint8_t imuFrequency();

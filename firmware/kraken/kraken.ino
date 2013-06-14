@@ -14,7 +14,7 @@
 //#include <SD.h>
 #include <EEPROM.h>
 #include <SoftwareSerial.h>
-#include "OneWire.h"
+#include <OneWire.h>
 
 // Include Files
 #include "debug.h"
@@ -38,6 +38,8 @@ uint8_t TEMP_ADDR[8] = {0x28, 0xFE, 0xD5, 0x64, 0x04, 0x00, 0x00, 0xF3};     //K
 //char SD_IMU[] = "IMU.LOG";
 
 // Sleep counter
+#define EEPROM_SLEEP_LOW 4
+#define EEPROM_SLEEP_HIGH 5
 volatile uint16_t sleep_cycles = 2700; // 2700 = 6 hours
 volatile uint16_t sleep_counter = sleep_cycles; // Initialise at max value
 
@@ -100,6 +102,11 @@ void setup() {
         digitalWrite(STATUS_LED_PIN, HIGH);
     else
         digitalWrite(STATUS_LED_PIN, LOW);
+
+    // Get sleep time
+    byte lowByte = EEPROM.read(EEPROM_SLEEP_LOW);
+    byte highByte = EEPROM.read(EEPROM_SLEEP_HIGH);
+    sleep_cycles = ((highByte << 8) | lowByte);
 
     // Setup SD Card
     /*
@@ -296,8 +303,8 @@ void loop(){
     rockblock_off();
 
     // Only sleep for 30 min if deployed in the last 24 hours / 48 transmissions
-    if (msg.counter < 48)
-        sleep_counter = sleep_cycles - 225;
+    //if (msg.counter < 48)
+    //    sleep_counter = sleep_cycles - 225;
 
     if (SERIAL_EN)
         digitalWrite(STATUS_LED_PIN, LOW);
@@ -338,6 +345,8 @@ void executeRcvdCommand(uint8_t cmd, uint16_t val){
         // Change update frequency
         case 0xAA:
             sleep_cycles = val;
+            EEPROM.write(EEPROM_SLEEP_LOW, (byte) (0xFF & val));
+            EEPROM.write(EEPROM_SLEEP_HIGH, (byte) (val >> 8));
             if(SERIAL_EN)
                 Serial.println("Update frequency changed.");
             break;
